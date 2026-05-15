@@ -598,7 +598,9 @@ def requires_subprocess():
     return unittest.skipUnless(has_subprocess_support, "requires subprocess support")
 
 # Emscripten's socket emulation and WASI sockets have limitations.
-has_socket_support = not is_emscripten and not is_wasi and not is_nanvix
+# Nanvix supports IPv4 sockets (IPv6 disabled at build time via
+# --disable-ipv6).  https://github.com/nanvix/cpython/issues/327
+has_socket_support = not is_emscripten and not is_wasi
 
 def requires_working_socket(*, module=False):
     """Skip tests or modules that require working sockets

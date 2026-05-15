@@ -800,6 +800,8 @@ def run_regrtest(
         else:
             env.pop("NANVIXD_EXTRA_ARGS", None)
         env.pop("NANVIX_STANDALONE", None)
+        exclude_set = set(config.HOSTED_EXCLUDE)
+        test_list = [m for m in test_list if m not in exclude_set]
 
     cmd = [sys.executable, str(run_tests_script)] + test_list
 

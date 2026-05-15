@@ -4,6 +4,7 @@ import os
 import stat
 import sys
 import re
+from test import support
 from test.support import os_helper
 from test.support import warnings_helper
 import time
@@ -58,6 +59,7 @@ class DateTimeTests(unittest.TestCase):
                 r"[a-zA-Z]{3}, \d{2}-[a-zA-Z]{3}-\d{4} \d{2}:\d{2}:\d{2} GMT$",
                 "bad time2netscape format: %s %s" % (az, bz))
 
+    @unittest.skipIf(support.is_nanvix, "Nanvix VM clock may not reflect current year")
     def test_http2time(self):
         def parse_date(text):
             return time.gmtime(http2time(text))[:6]
@@ -200,6 +202,7 @@ class DateTimeTests(unittest.TestCase):
 
 class HeaderTests(unittest.TestCase):
 
+    @unittest.skipIf(support.is_nanvix, "Nanvix VM clock may not reflect current year")
     def test_parse_ns_headers(self):
         # quotes should be stripped
         expected = [[('foo', 'bar'), ('expires', 2209069412), ('version', '0')]]
@@ -1427,6 +1430,8 @@ class CookieTests(unittest.TestCase):
 class LWPCookieTests(unittest.TestCase):
     # Tests taken from libwww-perl, with a few modifications and additions.
 
+    @unittest.skipIf(support.is_nanvix,
+                     "Nanvix VM clock affects cookie expiry")
     def test_netscape_example_1(self):
         #-------------------------------------------------------------------
         # First we check that it works for the original example at
@@ -1846,6 +1851,7 @@ class LWPCookieTests(unittest.TestCase):
         # unicode URL doesn't raise exception
         cookie = interact_2965(c, "http://www.acme.com/\xfc")
 
+    @unittest.skipIf(support.is_nanvix, "Nanvix VM clock affects cookie expiry")
     def test_mozilla(self):
         # Save / load Mozilla/Netscape cookie file format.
         year_plus_one = time.localtime()[0] + 1
