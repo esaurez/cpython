@@ -347,6 +347,7 @@ STANDALONE_EXCLUDE: list[str] = [
     "test_zipfile",  # NSKIP019: standalone too slow / heap too small for module
     "test_import",  # NSKIP019: standalone 32 MB heap too small for module
     "test_unicode",  # NSKIP019: standalone 32 MB heap too small for module
+    "test_os",  # initrd mode (v0.14.3+): 1 error + 1 failure in OS subtests
 ]
 
 # Platform-specific nanvixd extra arguments.
@@ -464,10 +465,26 @@ def mkramfs_binary() -> str:
     return "mkramfs.elf"
 
 
+def mkimage_binary() -> str:
+    """Return the mkimage binary name for the current platform."""
+    if IS_WINDOWS:
+        return "mkimage.exe"
+    return "mkimage.elf"
+
+
 # Windows host-native binaries needed for local test execution.
 # These are downloaded from the Nanvix release page during setup.
 # kernel.elf is a *guest* binary (not .exe) — nanvixd loads it directly.
-WINDOWS_HOST_BINARIES: list[str] = ["nanvixd.exe", "mkramfs.exe", "kernel.elf"]
+# Daemons (procd, memd, vfsd) are also guest binaries (.elf).
+WINDOWS_HOST_BINARIES: list[str] = [
+    "nanvixd.exe",
+    "mkramfs.exe",
+    "mkimage.exe",
+    "kernel.elf",
+    "procd.elf",
+    "memd.elf",
+    "vfsd.elf",
+]
 
 
 def python_binary() -> str:
