@@ -34,7 +34,7 @@ from pathlib import Path
 
 from nanvix_zutil import (
     CFG_SYSROOT,
-    CFG_TOOLCHAIN,
+    TOOLCHAIN_CONTAINER_PATH,
     EXIT_MISSING_DEP,
     ZScript,
     log,
@@ -152,8 +152,8 @@ class CPythonBuild(ZScript):
                 code=EXIT_MISSING_DEP,
                 hint="Run `./z setup` first to download the sysroot.",
             )
-        toolchain = self.config.get(CFG_TOOLCHAIN, config.TOOLCHAIN_DEFAULT_PATH)
-        return sysroot, toolchain or config.TOOLCHAIN_DEFAULT_PATH
+        toolchain = str(TOOLCHAIN_CONTAINER_PATH)
+        return sysroot, toolchain
 
     def _build_kwargs(self, release: bool = False) -> dict[str, object]:
         """Return common keyword arguments for build/test/package modules."""
@@ -188,7 +188,7 @@ class CPythonBuild(ZScript):
 
         return build_mod.make_args(
             str(self.translate_path(Path(sysroot))),
-            str(self.translate_path(Path(toolchain))),
+            toolchain,
             *targets,
             platform=self.config.machine,
             process_mode=self.config.deployment_mode,
