@@ -149,10 +149,10 @@ jobs:
             curl -fsSL https://raw.githubusercontent.com/nanvix/nanvix/refs/heads/dev/scripts/get-nanvix.sh \
               | bash -s -- --force nanvix-dl
             MKRAMFS=""
-            NVX_TAR=$(find nanvix-dl -name "nanvix-microvm-standalone-*.tar.gz" | head -1)
+            NVX_TAR=$(find nanvix-dl -name "nanvix*microvm-standalone*256mb*.tar.bz2" | head -1)
             if [[ -n "$NVX_TAR" ]]; then
               mkdir -p nanvix-extract
-              tar -xzf "$NVX_TAR" -C nanvix-extract
+              tar -xjf "$NVX_TAR" -C nanvix-extract
               MKRAMFS=$(find nanvix-extract -name "mkramfs.elf" -type f | head -1)
             fi
 
