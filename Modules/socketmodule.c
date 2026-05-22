@@ -2975,10 +2975,12 @@ sock_accept(PySocketSockObject *s, PyObject *Py_UNUSED(ignored))
     if (!state->accept4_works)
 #endif
     {
+#ifndef __nanvix__
         if (_Py_set_inheritable(newfd, 0, NULL) < 0) {
             SOCKETCLOSE(newfd);
             goto finally;
         }
+#endif
     }
 #endif
 
@@ -5555,9 +5557,11 @@ sock_initobj_impl(PySocketSockObject *self, int family, int type, int proto,
                 if (fd >= 0) {
                     state->sock_cloexec_works = 1;
                 }
-                else if (errno == EINVAL || errno == EPROTOTYPE) {
+                else if (errno == EINVAL || errno == EPROTOTYPE
+                         || errno == EAGAIN) {
                     /* Linux older than 2.6.27 does not support SOCK_CLOEXEC.
-                     * Nanvix returns EPROTOTYPE for unsupported socket flags. */
+                     * Nanvix returns EPROTOTYPE or EAGAIN for unsupported
+                     * socket flags. */
                     state->sock_cloexec_works = 0;
                     fd = socket(family, type, proto);
                 }
@@ -5575,10 +5579,12 @@ sock_initobj_impl(PySocketSockObject *self, int family, int type, int proto,
             return -1;
         }
 
+#ifndef __nanvix__
         if (_Py_set_inheritable(fd, 0, atomic_flag_works) < 0) {
             SOCKETCLOSE(fd);
             return -1;
         }
+#endif
 #endif
     }
     if (init_sockobject(state, self, fd, family, type, proto) == -1) {
