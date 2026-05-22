@@ -23,26 +23,34 @@ if support.is_emscripten or support.is_wasi:
     raise unittest.SkipTest("Cannot create socketpair on Emscripten/WASI.")
 
 
-if hasattr(socket, 'socketpair'):
-    socketpair = socket.socketpair
+def _tcp_socketpair(family=socket.AF_INET, type=socket.SOCK_STREAM, proto=0):
+    """Create a socketpair via TCP loopback (no AF_UNIX needed)."""
+    with socket.socket(family, type, proto) as l:
+        l.bind((socket_helper.HOST, 0))
+        l.listen()
+        c = socket.socket(family, type, proto)
+        try:
+            c.connect(l.getsockname())
+            caddr = c.getsockname()
+            while True:
+                a, addr = l.accept()
+                # check that we've got the correct client
+                if addr == caddr:
+                    return c, a
+                a.close()
+        except OSError:
+            c.close()
+            raise
+
+
+# Nanvix standalone does not support AF_UNIX (NSKIP020), so the native
+# socketpair() (which defaults to AF_UNIX) would fail.  Use the TCP
+# loopback fallback instead.
+# https://github.com/nanvix/cpython/issues/327
+if support.is_nanvix or not hasattr(socket, 'socketpair'):
+    socketpair = _tcp_socketpair
 else:
-    def socketpair(family=socket.AF_INET, type=socket.SOCK_STREAM, proto=0):
-        with socket.socket(family, type, proto) as l:
-            l.bind((socket_helper.HOST, 0))
-            l.listen()
-            c = socket.socket(family, type, proto)
-            try:
-                c.connect(l.getsockname())
-                caddr = c.getsockname()
-                while True:
-                    a, addr = l.accept()
-                    # check that we've got the correct client
-                    if addr == caddr:
-                        return c, a
-                    a.close()
-            except OSError:
-                c.close()
-                raise
+    socketpair = socket.socketpair
 
 
 def find_ready_matching(ready, flag):

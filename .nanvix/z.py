@@ -262,7 +262,7 @@ class CPythonBuild(ZScript):
         sysroot, toolchain = self._get_host_paths()
         kwargs = self._build_kwargs()
 
-        nanvixd_extra = None
+        nanvixd_extra = ["-allow-host-networking"]
 
         test_mod.run_all(
             sysroot,
@@ -280,7 +280,7 @@ class CPythonBuild(ZScript):
         sysroot, toolchain = self._get_host_paths()
         kwargs = self._build_kwargs()
 
-        nanvixd_extra = None
+        nanvixd_extra = ["-allow-host-networking"]
 
         # run_benchmark does not use 'release' — always stages a
         # non-release build and applies release trimming itself.

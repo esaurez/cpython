@@ -75,9 +75,7 @@ def _create_initrd(
     def _escape(arg: str) -> str:
         return arg.replace(";", "\\;")
 
-    def _entry(
-        elf: Path, argv0: str, extra: list[str] | None, env: str | None
-    ) -> str:
+    def _entry(elf: Path, argv0: str, extra: list[str] | None, env: str | None) -> str:
         parts = [_escape(argv0)] + [_escape(a) for a in (extra or [])]
         argv = " ".join(parts)
         # The entry format for mkimage is:
@@ -470,6 +468,15 @@ def stage(
         + (lxml_snippet if standalone else ""),
     )
 
+    # Copy the HTTP server smoke-test script from the repo root into the
+    # sysroot so it ends up in the ramfs image built downstream by
+    # stage_ramfs().  Standalone mode mounts the ramfs as /, so the
+    # script must already be present at this point — copying it later
+    # (e.g. from run_smoke_httpserver) is too late.
+    httpserver_src = repo_root / "httpserver.py"
+    if httpserver_src.is_file():
+        shutil.copy2(httpserver_src, sysroot_dir / "httpserver.py")
+
     # Copy Nanvix runtime binaries.
     bin_dir = sysroot_dir / "bin"
     bin_dir.mkdir(parents=True, exist_ok=True)
@@ -742,6 +749,192 @@ def run_hello(
 
 
 # ---------------------------------------------------------------------------
+# HTTP server smoke test
+# ---------------------------------------------------------------------------
+
+
+def run_smoke_httpserver(
+    staging: Path,
+    repo_root: Path,
+    *,
+    process_mode: str = config.DEFAULT_PROCESS_MODE,
+    platform: str = config.DEFAULT_PLATFORM,
+    nanvixd_extra: list[str] | None = None,
+    ramfs_img: Path | None = None,
+    nanvix_home: Path | None = None,
+    host: str = "127.0.0.1",
+    port: int = 9999,
+    boot_timeout: float = 60.0,
+    request_timeout: float = 10.0,
+    listening_marker: str = "HTTP server listening",
+) -> None:
+    """Launch ``httpserver.py`` on nanvixd and probe it from the host.
+
+    Assumes ``httpserver.py`` has already been staged into the sysroot
+    by :func:`stage` (and therefore into the ramfs image for standalone
+    mode).  Starts nanvixd as a background process, waits for the
+    server's "listening" log line on stdout, issues a single HTTP/1.0
+    GET, and validates the response body.  The nanvixd process is
+    always terminated before this function returns.
+
+    The smoke test only runs in *standalone* mode.  In multi-process
+    and single-process modes the standalone networking stack is not
+    exposed to the host (see ``HOSTED_EXCLUDE`` in ``.nanvix/config.py``),
+    so the test is skipped with a "SKIP" message.
+    """
+    import socket as _socket
+    import tempfile
+
+    standalone = process_mode == "standalone"
+    if not standalone:
+        print(
+            f"Test: HTTP server smoke ({process_mode})... "
+            "SKIP (networking only available in standalone mode)"
+        )
+        return
+
+    sysroot = staging / "sysroot"
+    script_name = "httpserver.py"
+    if not (sysroot / script_name).is_file():
+        raise RuntimeError(
+            f"{script_name} not found in staging sysroot ({sysroot}); "
+            "stage() did not copy it"
+        )
+
+    resolved_extra: list[str] = (
+        nanvixd_extra
+        if nanvixd_extra is not None
+        else config.PLATFORM_NANVIXD_ARGS.get(platform, [])
+    )
+    nanvixd = str((sysroot / "bin" / config.nanvixd_binary()).resolve())
+
+    if ramfs_img is None:
+        raise ValueError("ramfs_img is required for standalone mode")
+    if nanvix_home is not None:
+        for name in (
+            config.mkramfs_binary(),
+            config.mkimage_binary(),
+            "procd.elf",
+            "memd.elf",
+            "vfsd.elf",
+        ):
+            hp = nanvix_home / "bin" / name
+            if hp.is_file():
+                shutil.copy2(hp, sysroot / "bin" / name)
+
+    bin_dir = sysroot / "bin"
+    app_path = sysroot / "bin" / config.python_binary()
+    app_args = ["-B", f"./{script_name}"]
+    app_env = (
+        f"PYTHONHOME=/ PYTHONDONTWRITEBYTECODE=1"
+        f" _PYTHON_SYSCONFIGDATA_NAME={config.SYSCONFIGDATA_NAME}"
+    )
+    initrd_img = _create_initrd(bin_dir, app_path, app_args=app_args, app_env=app_env)
+    cmd = [
+        nanvixd,
+        "-bin-dir",
+        str(bin_dir),
+        "-ramfs",
+        str(ramfs_img),
+        *resolved_extra,
+        "--",
+        str(initrd_img),
+    ]
+
+    print(f"Test: HTTP server smoke ({process_mode}) on {host}:{port}...")
+
+    # Capture stdout/stderr to a file so we can both poll for the
+    # "listening" marker without risking PIPE deadlock and include the
+    # output in error messages.
+    log_fd, log_path_str = tempfile.mkstemp(prefix="nanvixd-smoke-", suffix=".log")
+    os.close(log_fd)
+    log_path = Path(log_path_str)
+    log_fh = open(log_path, "wb")
+    proc = subprocess.Popen(
+        cmd,
+        stdin=subprocess.DEVNULL,
+        stdout=log_fh,
+        stderr=subprocess.STDOUT,
+        cwd=sysroot,
+    )
+
+    def _read_log() -> str:
+        try:
+            return log_path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            return ""
+
+    try:
+        # Wait for the server to log that it is listening.  Only then
+        # is it safe to attempt a TCP connection (otherwise we might
+        # race with the kernel's own host stack or unrelated services
+        # on the same port).
+        deadline = time.monotonic() + boot_timeout
+        ready = False
+        while time.monotonic() < deadline:
+            if proc.poll() is not None:
+                raise RuntimeError(
+                    f"nanvixd exited prematurely (rc={proc.returncode}) "
+                    f"before server became ready:\n{_read_log()}"
+                )
+            if listening_marker in _read_log():
+                ready = True
+                break
+            time.sleep(0.5)
+        if not ready:
+            raise RuntimeError(
+                f"HTTP server did not log '{listening_marker}' "
+                f"within {boot_timeout:.0f}s:\n{_read_log()}"
+            )
+
+        # Issue a minimal HTTP/1.0 request.
+        try:
+            with _socket.create_connection((host, port), timeout=request_timeout) as s:
+                s.sendall(b"GET / HTTP/1.0\r\nHost: nanvix\r\n\r\n")
+                s.settimeout(request_timeout)
+                chunks: list[bytes] = []
+                while True:
+                    try:
+                        data = s.recv(4096)
+                    except OSError:
+                        break
+                    if not data:
+                        break
+                    chunks.append(data)
+        except OSError as e:
+            raise RuntimeError(
+                f"HTTP smoke test failed to connect to {host}:{port}: {e}\n"
+                f"nanvixd output:\n{_read_log()}"
+            )
+        response = b"".join(chunks)
+
+        if b"200 OK" not in response or b"Hello from Nanvix!" not in response:
+            raise RuntimeError(
+                "HTTP smoke test received unexpected response:\n"
+                + response.decode("utf-8", errors="replace")
+                + "\nnanvixd output:\n"
+                + _read_log()
+            )
+
+        print("  PASS")
+    finally:
+        if proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait(timeout=5)
+        log_fh.close()
+        try:
+            log_path.unlink()
+        except OSError:
+            pass
+        if initrd_img.exists():
+            initrd_img.unlink()
+
+
+# ---------------------------------------------------------------------------
 # Regression tests
 # ---------------------------------------------------------------------------
 
@@ -800,6 +993,8 @@ def run_regrtest(
         else:
             env.pop("NANVIXD_EXTRA_ARGS", None)
         env.pop("NANVIX_STANDALONE", None)
+        exclude_set = set(config.HOSTED_EXCLUDE)
+        test_list = [m for m in test_list if m not in exclude_set]
 
     cmd = [sys.executable, str(run_tests_script)] + test_list
 
@@ -889,6 +1084,17 @@ def run_all(
     # Hello test.
     run_hello(
         staging,
+        process_mode=process_mode,
+        platform=platform,
+        nanvixd_extra=nanvixd_extra,
+        ramfs_img=ramfs_img,
+        nanvix_home=nanvix_home,
+    )
+
+    # HTTP server smoke test.
+    run_smoke_httpserver(
+        staging,
+        repo_root,
         process_mode=process_mode,
         platform=platform,
         nanvixd_extra=nanvixd_extra,
@@ -997,9 +1203,7 @@ def _run_benchmark_impl(
 
     # Write a minimal benchmark script.
     bench_script = "bench_hello.py"
-    (staging / "sysroot" / bench_script).write_text(
-        "print('hello world')\n"
-    )
+    (staging / "sysroot" / bench_script).write_text("print('hello world')\n")
 
     # Build ramfs with release trimming (keep_tests=False).
     ramfs_img = None

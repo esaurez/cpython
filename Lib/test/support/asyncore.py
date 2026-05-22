@@ -59,12 +59,18 @@ import warnings
 
 import os
 from errno import EALREADY, EINPROGRESS, EWOULDBLOCK, ECONNRESET, EINVAL, \
-     ENOTCONN, ESHUTDOWN, EISCONN, EBADF, ECONNABORTED, EPIPE, EAGAIN, \
+     ENOTCONN, EISCONN, EBADF, ECONNABORTED, EPIPE, EAGAIN, \
      errorcode
+# ESHUTDOWN is not defined on all platforms (e.g. Nanvix libc).
+# https://github.com/nanvix/cpython/issues/327
+try:
+    from errno import ESHUTDOWN
+except ImportError:
+    ESHUTDOWN = None
 
 
 _DISCONNECTED = frozenset({ECONNRESET, ENOTCONN, ESHUTDOWN, ECONNABORTED, EPIPE,
-                           EBADF})
+                           EBADF}) - {None}
 
 try:
     socket_map

@@ -333,6 +333,36 @@ NANVIX_TEST_LIST: list[str] = [
     "test_nanvix_lxml",
     # #526 — _lzma stdlib enablement
     "test_lzma",
+    # #327 — network and protocol tests (IPv4 only; IPv6 disabled)
+    # Core networking
+    "test_socket",
+    "test_ssl",
+    "test_timeout",
+    # HTTP & Web
+    "test_httplib",
+    "test_http_cookiejar",
+    "test_http_cookies",
+    # URL handling
+    "test_urllib",
+    "test_urllib2",
+    "test_urlparse",
+    "test_urllib_response",
+    # Mail protocols
+    "test_ftplib",
+    "test_poplib",
+    "test_imaplib",
+    "test_nntplib",
+    "test_smtplib",
+    # RPC
+    "test_xmlrpc",
+    # I/O multiplexing
+    "test_select",
+    "test_selectors",
+    "test_poll",
+    # Server infrastructure
+    "test_socketserver",
+    # Network utilities
+    "test_ipaddress",
 ]
 
 # Default batch size for regrtest VM invocations.
@@ -348,6 +378,52 @@ STANDALONE_EXCLUDE: list[str] = [
     "test_import",  # NSKIP019: standalone 32 MB heap too small for module
     "test_unicode",  # NSKIP019: standalone 32 MB heap too small for module
     "test_os",  # initrd mode (v0.14.3+): 1 error + 1 failure in OS subtests
+    "test_socket",  # NSKIP019: standalone 32 MB heap too small for module
+    "test_ssl",  # NSKIP019: standalone 32 MB heap too small for module
+    # #327: standalone kernel getsockopt/setsockopt returns errno 134;
+    # these tests require full socket option support and are hosted-only
+    # until the standalone network stack is complete.
+    "test_httplib",
+    "test_urllib",
+    "test_urllib2",
+    "test_urllib_response",
+    "test_ftplib",
+    "test_poplib",
+    "test_imaplib",
+    "test_nntplib",
+    "test_smtplib",
+    "test_xmlrpc",
+    "test_select",
+    "test_selectors",
+    "test_poll",
+    "test_socketserver",
+    # #327: asyncio event-loop not yet supported in standalone mode.
+    "test_contextlib_async",
+]
+
+# Tests that require host networking (only available in standalone with
+# -allow-host-networking).  Excluded from multi-process / single-process.
+HOSTED_EXCLUDE: list[str] = [
+    "test_socket",
+    "test_ssl",
+    "test_timeout",
+    "test_httplib",
+    "test_http_cookiejar",
+    "test_http_cookies",
+    "test_urllib",
+    "test_urllib2",
+    "test_urlparse",
+    "test_urllib_response",
+    "test_ftplib",
+    "test_poplib",
+    "test_imaplib",
+    "test_nntplib",
+    "test_smtplib",
+    "test_xmlrpc",
+    "test_select",
+    "test_selectors",
+    "test_poll",
+    "test_socketserver",
 ]
 
 # Platform-specific nanvixd extra arguments.

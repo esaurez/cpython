@@ -71,9 +71,7 @@ def _create_initrd(
     def _escape(arg: str) -> str:
         return arg.replace(";", "\\;")
 
-    def _entry(
-        elf: Path, argv0: str, extra: list[str] | None, env: str | None
-    ) -> str:
+    def _entry(elf: Path, argv0: str, extra: list[str] | None, env: str | None) -> str:
         parts = [_escape(argv0)] + [_escape(a) for a in (extra or [])]
         argv = " ".join(parts)
         cmdline = argv
