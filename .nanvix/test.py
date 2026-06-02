@@ -448,6 +448,21 @@ def stage(
     # filesystem I/O goes through nanvixd's virtualized host-FS layer.
     hello_script = sysroot_dir / "test_hello.py"
     standalone = process_mode == "standalone"
+    # Phase 0 of the .a -> .so migration: `array` is now a shared
+    # extension at lib/python3.12/lib-dynload/array.cpython-312.so
+    # (built from `*shared* array arraymodule.c` in Setup.local).
+    # Asserting it is NOT in `sys.builtin_module_names` proves the
+    # dlopen path is exercised end-to-end; if the .so failed to load,
+    # the import would raise.
+    array_snippet = (
+        "import array\n"
+        "assert 'array' not in sys.builtin_module_names, "
+        "'array still built-in!'\n"
+        "_a = array.array('i', [1, 2, 3])\n"
+        "assert _a.tolist() == [1, 2, 3], f'array contents wrong: {_a.tolist()}'\n"
+        "print(f'CPYTHON_TEST_ARRAY_SO: array loaded via dlopen from "
+        "{array.__file__}')\n"
+    )
     lxml_snippet = (
         "try:\n"
         "    import lxml.etree\n"
@@ -465,6 +480,7 @@ def stage(
         "import sys\n"
         "print('CPYTHON_TEST_HELLO: Hello from Python', sys.version_info[:2])\n"
         "print('CPYTHON_TEST_PLATFORM:', sys.platform)\n"
+        + array_snippet
         + (lxml_snippet if standalone else ""),
     )
 
