@@ -348,6 +348,17 @@ def _generate_setup_local_cmd() -> str:
         f"'_posixsubprocess _posixsubprocess.c' "
         f"'fcntl fcntlmodule.c' "
         f"'termios termios.c' "
+        f"'# Phase 3: Tier-3 modules with external Nanvix-ported .a deps.' "
+        f"'# Underlying libs (libz, libbz2, liblzma, libssl, libcrypto,' "
+        f"'# libsqlite3, libffi) live in $(SYSROOT)/lib and are pulled into' "
+        f"'# python.elf via --whole-archive (see Makefile.nanvix LIBS).' "
+        f"'_bz2 _bz2module.c' "
+        f"'_lzma _lzmamodule.c' "
+        f"'zlib zlibmodule.c' "
+        f"'_ssl _ssl.c' "
+        f"'_hashlib _hashopenssl.c' "
+        f"'_sqlite3 _sqlite/blob.c _sqlite/connection.c _sqlite/cursor.c _sqlite/microprotocols.c _sqlite/module.c _sqlite/prepare_protocol.c _sqlite/row.c _sqlite/statement.c _sqlite/util.c' "
+        f"'_ctypes _ctypes/_ctypes.c _ctypes/callbacks.c _ctypes/callproc.c _ctypes/stgdict.c _ctypes/cfield.c' "
         f"> {ws}/Modules/Setup.local"
     )
 
