@@ -539,6 +539,29 @@ def stage(
         "    print(f'CPYTHON_TEST_PHASE2: {_name} loaded via dlopen from "
         "{_mod.__file__}')\n"
     )
+    # Phase 3: Tier-3 modules with external Nanvix-ported .a deps
+    # (sysroot libs: libz, libbz2, liblzma, libssl, libcrypto,
+    # libsqlite3, libffi). Each .so currently carries its own copy of
+    # the underlying lib (size optimization deferred to a follow-up
+    # PR — see nanvix-todo/phase2-unbundle-cpython-internal-libs.md).
+    phase3_snippet = (
+        "_phase3 = [\n"
+        "    ('_bz2', lambda m: m.BZ2Compressor().compress(b'hello') is not None),\n"
+        "    ('_lzma', lambda m: hasattr(m, 'LZMACompressor')),\n"
+        "    ('zlib', lambda m: m.crc32(b'hello') == 0x3610a686),\n"
+        "    ('_ssl', lambda m: hasattr(m, 'RAND_bytes')),\n"
+        "    ('_hashlib', lambda m: hasattr(m, 'openssl_sha256') or hasattr(m, 'new')),\n"
+        "    ('_sqlite3', lambda m: hasattr(m, 'connect')),\n"
+        "    ('_ctypes', lambda m: hasattr(m, 'dlopen')),\n"
+        "]\n"
+        "for _name, _check in _phase3:\n"
+        "    _mod = __import__(_name)\n"
+        "    assert _name not in sys.builtin_module_names, "
+        "f'{_name} still built-in!'\n"
+        "    assert _check(_mod), f'{_name} sanity check failed'\n"
+        "    print(f'CPYTHON_TEST_PHASE3: {_name} loaded via dlopen from "
+        "{_mod.__file__}')\n"
+    )
     # Phase 1B: Tier-1 math + memory modules. Same dlopen flow; libm
     # symbols are pulled from python.elf via --whole-archive.
     phase1b_snippet = (
@@ -579,6 +602,7 @@ def stage(
         + phase1b_snippet
         + phase1c_snippet
         + phase2_snippet
+        + phase3_snippet
         + (lxml_snippet if standalone else ""),
     )
 
