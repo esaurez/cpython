@@ -320,6 +320,15 @@ def _generate_setup_local_cmd() -> str:
         f"'_statistics _statisticsmodule.c' "
         f"'mmap mmapmodule.c' "
         f"'_contextvars _contextvarsmodule.c' "
+        f"'# Phase 1C: Tier-1 text codecs (pure C, no external deps).' "
+        f"'unicodedata unicodedata.c' "
+        f"'_multibytecodec cjkcodecs/multibytecodec.c' "
+        f"'_codecs_cn cjkcodecs/_codecs_cn.c' "
+        f"'_codecs_hk cjkcodecs/_codecs_hk.c' "
+        f"'_codecs_iso2022 cjkcodecs/_codecs_iso2022.c' "
+        f"'_codecs_jp cjkcodecs/_codecs_jp.c' "
+        f"'_codecs_kr cjkcodecs/_codecs_kr.c' "
+        f"'_codecs_tw cjkcodecs/_codecs_tw.c' "
         f"> {ws}/Modules/Setup.local"
     )
 
