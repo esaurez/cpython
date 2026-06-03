@@ -488,6 +488,27 @@ def stage(
         "    print(f'CPYTHON_TEST_PHASE1A: {_name} loaded via dlopen from "
         "{_mod.__file__}')\n"
     )
+    # Phase 1C: Tier-1 text-codec modules (CJK + unicodedata). No
+    # external deps; resolve against python.elf's .dynsym via dlopen.
+    phase1c_snippet = (
+        "_phase1c = [\n"
+        "    ('unicodedata', lambda m: m.lookup('LATIN SMALL LETTER A') == 'a'),\n"
+        "    ('_multibytecodec', lambda m: hasattr(m, '__create_codec')),\n"
+        "    ('_codecs_cn', lambda m: hasattr(m, 'getcodec')),\n"
+        "    ('_codecs_hk', lambda m: hasattr(m, 'getcodec')),\n"
+        "    ('_codecs_iso2022', lambda m: hasattr(m, 'getcodec')),\n"
+        "    ('_codecs_jp', lambda m: hasattr(m, 'getcodec')),\n"
+        "    ('_codecs_kr', lambda m: hasattr(m, 'getcodec')),\n"
+        "    ('_codecs_tw', lambda m: hasattr(m, 'getcodec')),\n"
+        "]\n"
+        "for _name, _check in _phase1c:\n"
+        "    _mod = __import__(_name)\n"
+        "    assert _name not in sys.builtin_module_names, "
+        "f'{_name} still built-in!'\n"
+        "    assert _check(_mod), f'{_name} sanity check failed'\n"
+        "    print(f'CPYTHON_TEST_PHASE1C: {_name} loaded via dlopen from "
+        "{_mod.__file__}')\n"
+    )
     # Phase 1B: Tier-1 math + memory modules. Same dlopen flow; libm
     # symbols are pulled from python.elf via --whole-archive.
     phase1b_snippet = (
@@ -526,6 +547,7 @@ def stage(
         + array_snippet
         + phase1a_snippet
         + phase1b_snippet
+        + phase1c_snippet
         + (lxml_snippet if standalone else ""),
     )
 
