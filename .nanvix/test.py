@@ -509,6 +509,36 @@ def stage(
         "    print(f'CPYTHON_TEST_PHASE1C: {_name} loaded via dlopen from "
         "{_mod.__file__}')\n"
     )
+    # Phase 2: Tier-2 modules with bundled-in-cpython C deps. The
+    # underlying .a (libmpdec, libexpat, libHacl_Hash_SHA2, ...) stay
+    # in python.elf via --whole-archive; the .so wrappers resolve
+    # their symbols against python.elf's .dynsym at dlopen time.
+    phase2_snippet = (
+        "_phase2 = [\n"
+        "    ('_asyncio', lambda m: hasattr(m, 'Future')),\n"
+        "    ('_datetime', lambda m: hasattr(m, 'datetime_CAPI')),\n"
+        "    ('_decimal', lambda m: m.Decimal('1.1') + m.Decimal('2.2') == m.Decimal('3.3')),\n"
+        "    ('pyexpat', lambda m: hasattr(m, 'ParserCreate')),\n"
+        "    ('_elementtree', lambda m: hasattr(m, 'XMLParser')),\n"
+        "    ('_md5', lambda m: hasattr(m, 'md5')),\n"
+        "    ('_sha1', lambda m: hasattr(m, 'sha1')),\n"
+        "    ('_sha2', lambda m: hasattr(m, 'sha256')),\n"
+        "    ('_sha3', lambda m: hasattr(m, 'sha3_256')),\n"
+        "    ('_blake2', lambda m: hasattr(m, 'blake2b')),\n"
+        "    ('select', lambda m: hasattr(m, 'select')),\n"
+        "    ('_socket', lambda m: hasattr(m, 'socket')),\n"
+        "    ('_posixsubprocess', lambda m: hasattr(m, 'fork_exec')),\n"
+        "    ('fcntl', lambda m: hasattr(m, 'fcntl')),\n"
+        "    ('termios', lambda m: hasattr(m, 'tcgetattr')),\n"
+        "]\n"
+        "for _name, _check in _phase2:\n"
+        "    _mod = __import__(_name)\n"
+        "    assert _name not in sys.builtin_module_names, "
+        "f'{_name} still built-in!'\n"
+        "    assert _check(_mod), f'{_name} sanity check failed'\n"
+        "    print(f'CPYTHON_TEST_PHASE2: {_name} loaded via dlopen from "
+        "{_mod.__file__}')\n"
+    )
     # Phase 1B: Tier-1 math + memory modules. Same dlopen flow; libm
     # symbols are pulled from python.elf via --whole-archive.
     phase1b_snippet = (
@@ -548,6 +578,7 @@ def stage(
         + phase1a_snippet
         + phase1b_snippet
         + phase1c_snippet
+        + phase2_snippet
         + (lxml_snippet if standalone else ""),
     )
 
