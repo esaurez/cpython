@@ -166,6 +166,36 @@ def package(
     if py_lib.is_dir():
         shutil.copytree(py_lib, ramfs_sysroot / config.PYTHON_LIB_DIR)
 
+    # Stage the lxml + libxml2/libxslt/libexslt shared libraries from the
+    # buildroot into the release ramfs at sysroot/lib/<name>.so so the
+    # Cython shim modules (_lxml_etree.cpython-312.so,
+    # _lxml_elementpath.cpython-312.so) can dlopen them at runtime.
+    # The .so files declare a DT_NEEDED chain (liblxml_etree.so ->
+    # libxslt.so + libexslt.so + libxml2.so), which the Nanvix dynamic
+    # loader (see esaurez/nanvix#27) walks automatically at dlopen time.
+    #
+    # Missing any one of these would produce a broken release that fails
+    # at first `import lxml.etree`, so fail loudly here instead of
+    # warning and shipping the broken artifact.
+    buildroot_lib = repo_root / ".nanvix" / "buildroot" / "lib"
+    required_sos = [
+        "libxml2.so",
+        "libxslt.so",
+        "libexslt.so",
+        "liblxml_etree.so",
+        "liblxml_elementpath.so",
+    ]
+    missing = [name for name in required_sos if not (buildroot_lib / name).is_file()]
+    if missing:
+        raise FileNotFoundError(
+            "Cannot stage release: required lxml shared libraries missing "
+            f"from {buildroot_lib}: {', '.join(missing)}. Run `./z setup` to "
+            "populate the buildroot, or rebuild the upstream port libraries."
+        )
+    for so_name in required_sos:
+        shutil.copy2(buildroot_lib / so_name, ramfs_sysroot / so_name)
+        print(f"  Staged {so_name} -> sysroot/lib/")
+
     ramfs_mod.trim_sysroot(ramfs_staging)
 
     # --- Include python.elf binary ---
