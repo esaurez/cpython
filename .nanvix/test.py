@@ -488,6 +488,24 @@ def stage(
         "    print(f'CPYTHON_TEST_PHASE1A: {_name} loaded via dlopen from "
         "{_mod.__file__}')\n"
     )
+    # Phase 1B: Tier-1 math + memory modules. Same dlopen flow; libm
+    # symbols are pulled from python.elf via --whole-archive.
+    phase1b_snippet = (
+        "_phase1b = [\n"
+        "    ('math', lambda m: abs(m.sqrt(4.0) - 2.0) < 1e-9),\n"
+        "    ('cmath', lambda m: abs(m.sqrt(complex(-1)) - complex(0, 1)) < 1e-9),\n"
+        "    ('_statistics', lambda m: hasattr(m, '_normal_dist_inv_cdf')),\n"
+        "    ('mmap', lambda m: hasattr(m, 'mmap')),\n"
+        "    ('_contextvars', lambda m: hasattr(m, 'ContextVar')),\n"
+        "]\n"
+        "for _name, _check in _phase1b:\n"
+        "    _mod = __import__(_name)\n"
+        "    assert _name not in sys.builtin_module_names, "
+        "f'{_name} still built-in!'\n"
+        "    assert _check(_mod), f'{_name} sanity check failed'\n"
+        "    print(f'CPYTHON_TEST_PHASE1B: {_name} loaded via dlopen from "
+        "{_mod.__file__}')\n"
+    )
     lxml_snippet = (
         "try:\n"
         "    import lxml.etree\n"
@@ -507,6 +525,7 @@ def stage(
         "print('CPYTHON_TEST_PLATFORM:', sys.platform)\n"
         + array_snippet
         + phase1a_snippet
+        + phase1b_snippet
         + (lxml_snippet if standalone else ""),
     )
 
