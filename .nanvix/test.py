@@ -463,6 +463,31 @@ def stage(
         "print(f'CPYTHON_TEST_ARRAY_SO: array loaded via dlopen from "
         "{array.__file__}')\n"
     )
+    # Phase 1A: Tier-1 data-primitive modules now built as .so. Import
+    # each one and exercise a trivial operation to ensure dlopen +
+    # PyInit_<name> succeed end-to-end.
+    phase1a_snippet = (
+        "_phase1a = [\n"
+        "    ('_bisect', lambda m: m.bisect_left([1, 3, 5], 4) == 2),\n"
+        "    ('_heapq', lambda m: (m.heappush([], 1) is None)),\n"
+        "    ('_struct', lambda m: m.pack('i', 42) == b'\\x2a\\x00\\x00\\x00'),\n"
+        "    ('_random', lambda m: hasattr(m, 'Random')),\n"
+        "    ('_opcode', lambda m: hasattr(m, 'stack_effect')),\n"
+        "    ('_queue', lambda m: hasattr(m, 'SimpleQueue')),\n"
+        "    ('_csv', lambda m: hasattr(m, 'reader')),\n"
+        "    ('binascii', lambda m: m.hexlify(b'\\xab') == b'ab'),\n"
+        "    ('_json', lambda m: hasattr(m, 'encode_basestring_ascii')),\n"
+        "    ('_pickle', lambda m: hasattr(m, 'Pickler')),\n"
+        "    ('_zoneinfo', lambda m: hasattr(m, 'ZoneInfo')),\n"
+        "]\n"
+        "for _name, _check in _phase1a:\n"
+        "    _mod = __import__(_name)\n"
+        "    assert _name not in sys.builtin_module_names, "
+        "f'{_name} still built-in!'\n"
+        "    assert _check(_mod), f'{_name} sanity check failed'\n"
+        "    print(f'CPYTHON_TEST_PHASE1A: {_name} loaded via dlopen from "
+        "{_mod.__file__}')\n"
+    )
     lxml_snippet = (
         "try:\n"
         "    import lxml.etree\n"
@@ -481,6 +506,7 @@ def stage(
         "print('CPYTHON_TEST_HELLO: Hello from Python', sys.version_info[:2])\n"
         "print('CPYTHON_TEST_PLATFORM:', sys.platform)\n"
         + array_snippet
+        + phase1a_snippet
         + (lxml_snippet if standalone else ""),
     )
 
