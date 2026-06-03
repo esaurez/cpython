@@ -314,6 +314,12 @@ def _generate_setup_local_cmd() -> str:
         f"'_json _json.c' "
         f"'_pickle _pickle.c' "
         f"'_zoneinfo _zoneinfo.c' "
+        f"'# Phase 1B: Tier-1 math + memory modules (libm via python.elf).' "
+        f"'math mathmodule.c' "
+        f"'cmath cmathmodule.c' "
+        f"'_statistics _statisticsmodule.c' "
+        f"'mmap mmapmodule.c' "
+        f"'_contextvars _contextvarsmodule.c' "
         f"> {ws}/Modules/Setup.local"
     )
 
