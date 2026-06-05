@@ -418,16 +418,19 @@ def stage(
 
     sysroot_dir = staging / "sysroot"
 
-    # Stage the lxml/libxml2/libxslt/libexslt shared libraries from the
-    # buildroot into sysroot/lib/ so the Cython shim modules
-    # (_lxml_etree.cpython-312.so, _lxml_elementpath.cpython-312.so)
-    # can dlopen them at "lib/<name>.so" from the running guest.
+    # Stage the lxml/libxml2/libxslt/libexslt + libffi shared libraries
+    # from the buildroot into sysroot/lib/ so the corresponding C
+    # extensions (_lxml_etree.cpython-312.so,
+    # _lxml_elementpath.cpython-312.so, _ctypes.cpython-312.so) can
+    # dlopen them at "lib/<name>.so" from the running guest.
     # The .so files declare a DT_NEEDED chain (liblxml_etree.so ->
-    # libxslt.so + libexslt.so + libxml2.so), which the Nanvix dynamic
-    # loader (see esaurez/nanvix#27) walks automatically at dlopen time.
+    # libxslt.so + libexslt.so + libxml2.so; _ctypes.so -> libffi.so),
+    # which the Nanvix dynamic loader (see esaurez/nanvix#27) walks
+    # automatically at dlopen time.
     #
     # Missing any one of these would produce a broken test staging that
-    # fails at first `import lxml.etree`, so fail loudly here.
+    # fails at first `import lxml.etree` / `import ctypes`, so fail
+    # loudly here.
     buildroot_lib = repo_root / ".nanvix" / "buildroot" / "lib"
     sysroot_lib = sysroot_dir / "lib"
     sysroot_lib.mkdir(parents=True, exist_ok=True)
@@ -437,6 +440,7 @@ def stage(
         "libexslt.so",
         "liblxml_etree.so",
         "liblxml_elementpath.so",
+        "libffi.so",
     ]
     missing = [name for name in required_sos if not (buildroot_lib / name).is_file()]
     if missing:
