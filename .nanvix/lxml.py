@@ -19,27 +19,37 @@ _SETUP_LOCAL_TEMPLATE = """\
 *static*
 # Nanvix OS interface module (snapshot, host-mount).
 _nanvix _nanvixmodule.c
-# lxml C extension modules (statically linked via pre-built archives).
-_lxml_etree lxml_etree_builtin.c -L{sysroot}/lib -llxml_etree -lxslt -lexslt -lxml2 -lz
-_lxml_elementpath lxml_elementpath_builtin.c -L{sysroot}/lib -llxml_elementpath -lxml2 -lz
 
+# Phase 4 of the .a -> .so migration: lxml C extension modules are
+# loaded via dlopen at runtime (see Modules/lxml_etree_builtin.c and
+# Modules/lxml_elementpath_builtin.c). The shim source files compile
+# into thin .so wrappers; the actual lxml/libxslt/libexslt/libxml2
+# code lives in liblxml_etree.so + liblxml_elementpath.so staged into
+# sysroot/lib/ by .nanvix/test.py and .nanvix/package.py. No per-
+# module `-L`/`-l` flags here -- the Nanvix dynamic loader walks the
+# DT_NEEDED chain (esaurez/nanvix#27 + #28) at dlopen time.
+*shared*
 # Phase 0 of the .a -> .so migration: array as proof-of-concept shared module.
 # See nanvix-todo/cpython-static-to-shared-migration.md section 4.
 # Listed BEFORE Setup.stdlib's static declaration so makesetup's
 # "first rule wins" semantics make this shared variant take precedence.
-*shared*
 array arraymodule.c
+_lxml_etree lxml_etree_builtin.c
+_lxml_elementpath lxml_elementpath_builtin.c
 """
 
 
 def generate_setup_local(repo_root: Path, sysroot: Path) -> None:
-    """Generate Modules/Setup.local with statically-linked module definitions.
+    """Generate Modules/Setup.local with the dlopen-style lxml entries.
 
-    Includes both the _nanvix OS interface module and lxml C extensions.
+    The template is intentionally independent of `sysroot` now that the
+    lxml linkage is resolved at runtime via dlopen rather than at static
+    link time; `sysroot` is retained in the signature for call-site
+    compatibility.
     """
+    del sysroot  # No longer used; kept for call-site compatibility.
     setup_local = repo_root / "Modules" / "Setup.local"
-    content = _SETUP_LOCAL_TEMPLATE.format(sysroot=sysroot)
-    setup_local.write_text(content, encoding="utf-8")
+    setup_local.write_text(_SETUP_LOCAL_TEMPLATE, encoding="utf-8")
     print(f"[lxml] Generated {setup_local}")
 
 
