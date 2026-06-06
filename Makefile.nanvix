@@ -269,13 +269,44 @@ ifdef CONFIG_NANVIX_DOCKER
 else
 	$(CONFIGURE_ENV) ./configure $(CONFIGURE_OPTS)
 endif
+	@# Patch the generated Makefile so the three bundled-cpython libraries
+	@# (libmpdec, libexpat, libHacl_Hash_SHA2) compile with default symbol
+	@# visibility instead of inheriting cpython's global
+	@# `-fvisibility=hidden` (set in CONFIGURE_CFLAGS_NODIST). With the
+	@# default-visibility flag appended (last `-fvisibility=` wins), the
+	@# vendored libs' public symbols (mpd_*, PyExpat_XML_*,
+	@# python_hashlib_Hacl_*) reach python.elf's .dynsym, where the
+	@# Phase-2 .so modules (_decimal, pyexpat, _elementtree, _sha2) can
+	@# resolve them at dlopen time.  Without this, every Phase-2 .so
+	@# would have to bundle its own copy of the .a (the historical
+	@# behavior, ~4 MB of duplication).
+	@#
+	@# The pragma in mpdecimal.h that adds STV_HIDDEN is gated on
+	@# `__linux__ || __FreeBSD__ || __APPLE__`, none of which i686-nanvix
+	@# defines, so the pragma is already a no-op on Nanvix.  The only
+	@# remaining source of HIDDEN visibility is the `-fvisibility=hidden`
+	@# flag in CONFIGURE_CFLAGS_NODIST, which this patch overrides for
+	@# the three specific lib CFLAGS variables.
+ifdef CONFIG_NANVIX_DOCKER
+	$(DOCKER_RUN) sh -c '\
+		for var in LIBMPDEC_CFLAGS LIBEXPAT_CFLAGS LIBHACL_CFLAGS; do \
+			sed -i -E "s|^($$var=.*)\$$|\\1 -fvisibility=default|" Makefile; \
+		done'
+else
+	@for var in LIBMPDEC_CFLAGS LIBEXPAT_CFLAGS LIBHACL_CFLAGS; do \
+		sed -i -E "s|^($$var=.*)\$$|\1 -fvisibility=default|" Makefile; \
+	done
+endif
 	touch $(CONFIGURED_MARKER)
 
 # Build target
 build: $(CONFIGURED_MARKER)
 ifdef CONFIG_NANVIX_DOCKER
 	@echo "Building inside Docker..."
-	$(DOCKER_RUN) $(MAKE) -j$$(nproc) all
+	$(DOCKER_RUN) $(MAKE) -j$$(nproc) \
+		MODULE__DECIMAL_LDFLAGS= \
+		MODULE_PYEXPAT_LDFLAGS= \
+		all
 	@if [ -f python ]; then cp -f python python$(EXE); fi
 	$(DOCKER_RUN) sh -c '\
 		if [ ! -x "$(DOCKER_TOOLCHAIN_PATH)/bin/i686-nanvix-strip" ]; then \
@@ -287,7 +318,10 @@ ifdef CONFIG_NANVIX_DOCKER
 				echo "Error: failed to strip python$(EXE) inside Docker."; exit 1; }; \
 		fi'
 else
-	$(MAKE) -j$$(nproc) all
+	$(MAKE) -j$$(nproc) \
+		MODULE__DECIMAL_LDFLAGS= \
+		MODULE_PYEXPAT_LDFLAGS= \
+		all
 	@if [ -f python ]; then cp -f python python$(EXE); fi
 	@if [ -x "$(TOOLCHAIN_PREFIX)/bin/i686-nanvix-strip" ]; then \
 		if [ -f "python$(EXE)" ]; then \
