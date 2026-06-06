@@ -83,7 +83,7 @@ _DEP_EXPECTED_LIBS: dict[str, list[str]] = {
     "libffi": ["libffi.a", "libffi.so"],
     "zlib": ["libz.a"],
     "sqlite": ["libsqlite3.a"],
-    "openssl": ["libssl.a", "libcrypto.a"],
+    "openssl": ["libssl.a", "libcrypto.a", "libssl.so", "libcrypto.so"],
     "libxml2": ["libxml2.a"],
     "libxslt": ["libxslt.a", "libexslt.a"],
     "lxml": ["liblxml_etree.a", "liblxml_elementpath.a"],
