@@ -109,7 +109,7 @@ def configure_env(toolchain: str | Path, sysroot: str | Path) -> dict[str, str]:
             f"{tp['libc']} {tp['libm']} "
             f"-lstdc++ -lgcc -Wl,--no-whole-archive "
             f"-Wl,--start-group "
-            f"-lsqlite3 -lssl -lcrypto -lz -lbz2 -llzma -Wl,--end-group"
+            f"-lsqlite3 -lz -lbz2 -llzma -Wl,--end-group"
         ),
         "LIBSQLITE3_LIBS": f"-L{sr}/lib -lsqlite3",
         "LIBSQLITE3_CFLAGS": f"-I{sr}/include",

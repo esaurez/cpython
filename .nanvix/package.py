@@ -187,6 +187,8 @@ def package(
         "liblxml_etree.so",
         "liblxml_elementpath.so",
         "libffi.so",
+        "libcrypto.so",
+        "libssl.so",
     ]
     missing = [name for name in required_sos if not (buildroot_lib / name).is_file()]
     if missing:

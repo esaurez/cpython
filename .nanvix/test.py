@@ -441,11 +441,13 @@ def stage(
         "liblxml_etree.so",
         "liblxml_elementpath.so",
         "libffi.so",
+        "libcrypto.so",
+        "libssl.so",
     ]
     missing = [name for name in required_sos if not (buildroot_lib / name).is_file()]
     if missing:
         raise FileNotFoundError(
-            "Cannot stage test sysroot: required lxml shared libraries "
+            "Cannot stage test sysroot: required shared libraries "
             f"missing from {buildroot_lib}: {', '.join(missing)}. Run "
             "`./z setup` to populate the buildroot, or rebuild the upstream "
             "port libraries."
