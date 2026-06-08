@@ -48,6 +48,7 @@ from nanvix_zutil.buildroot import (
     extract_nanvix_version_base,
 )
 from nanvix_zutil.github import resolve_release_with_fallback
+from nanvix_zutil.paths import nanvix_root, repo_root
 
 _sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _loader import load_sibling
@@ -181,7 +182,7 @@ class CPythonBuild(ZScript):
                 "_run_make() is not supported on Windows. "
                 "Use build_mod.build() / build_mod.install() instead."
             )
-        run(*make_args, cwd=self.repo_root)
+        run(*make_args, cwd=repo_root())
 
     def _make_args(self, *targets: str) -> list[str]:
         """Build the make argument list for configure/build/install."""
@@ -218,7 +219,7 @@ class CPythonBuild(ZScript):
 
         self.config.save()
 
-        buildroot = self.nanvix_dir / "buildroot"
+        buildroot = nanvix_root() / "buildroot"
         sysroot = self.config.get(CFG_SYSROOT, "")
         if not sysroot or not buildroot.is_dir():
             return used_fallback
@@ -251,7 +252,7 @@ class CPythonBuild(ZScript):
         build_mod.build(
             sysroot,
             toolchain,
-            self.repo_root,
+            repo_root(),
             **self._build_kwargs(release=release),
             run_fn=lambda *args, **kw: run(*args, docker=self.docker, **kw),  # type: ignore[arg-type]
             docker=self.docker is not None,
@@ -260,7 +261,7 @@ class CPythonBuild(ZScript):
         # For standalone deployment mode, produce an initrd image
         # containing the system daemons and the application binary.
         if self.config.deployment_mode == "standalone":
-            make_initrd(self, f"python{config.EXE}")
+            make_initrd(self, f"python{config.EXE}", test=False)
 
     def test(self) -> None:
         """Run the CPython test suite (hello + regrtest)."""
@@ -273,7 +274,7 @@ class CPythonBuild(ZScript):
         test_mod.run_all(
             sysroot,
             toolchain,
-            self.repo_root,
+            repo_root(),
             **kwargs,
             nanvixd_extra=nanvixd_extra,
             run_fn=lambda *args, **kw: run(*args, docker=self.docker, **kw),  # type: ignore[arg-type]
@@ -294,7 +295,7 @@ class CPythonBuild(ZScript):
         test_mod.run_benchmark(
             sysroot,
             toolchain,
-            self.repo_root,
+            repo_root(),
             **bench_kwargs,
             nanvixd_extra=nanvixd_extra,
             run_fn=lambda *args, **kw: run(*args, docker=self.docker, **kw),  # type: ignore[arg-type]
@@ -310,13 +311,13 @@ class CPythonBuild(ZScript):
         package_mod.package(
             sysroot,
             toolchain,
-            self.repo_root,
+            repo_root(),
             **kwargs,
             run_fn=lambda *args, **kw: run(*args, docker=self.docker, **kw),  # type: ignore[arg-type]
             docker=self.docker is not None,
         )
         package_mod.verify(
-            self.repo_root,
+            repo_root(),
             platform=kwargs["platform"],
             process_mode=kwargs["process_mode"],
             memory_size=kwargs["memory_size"],
@@ -324,19 +325,19 @@ class CPythonBuild(ZScript):
 
     def clean(self) -> None:
         """Remove build artifacts."""
-        build_mod.clean(self.repo_root)
+        build_mod.clean(repo_root())
         # Remove initrd image generated for standalone mode.
-        initrd = self.repo_root / "python.img"
+        initrd = repo_root() / "python.img"
         if initrd.exists():
             initrd.unlink()
 
     def distclean(self) -> None:
         """Deep clean: remove all build artifacts, caches, and untracked files."""
-        build_mod.distclean(self.repo_root)
+        build_mod.distclean(repo_root())
 
     def _install_missing_deps(self) -> None:
         """Download missing dependency libraries using fallback assets."""
-        buildroot = self.nanvix_dir / "buildroot"
+        buildroot = nanvix_root() / "buildroot"
         buildroot.mkdir(parents=True, exist_ok=True)
         lib_dir = buildroot / "lib"
 
@@ -409,7 +410,7 @@ class CPythonBuild(ZScript):
             return
 
         # --- Try deployment-mode candidates via Buildroot.install_dep ---
-        br = Buildroot(buildroot)
+        br = Buildroot.create()
         modes = [deployment, "standalone", "single-process", "multi-process"]
         seen: set[str] = set()
         installed = False
