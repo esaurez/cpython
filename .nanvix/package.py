@@ -13,7 +13,6 @@ import shutil
 import tarfile
 from pathlib import Path
 from typing import Any
-
 import sys as _sys
 
 _sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -23,6 +22,7 @@ config = load_sibling("config", __file__)
 build_mod = load_sibling("build", __file__)
 lxml_mod = load_sibling("lxml", __file__)
 ramfs_mod = load_sibling("ramfs", __file__)
+from nanvix_zutil import paths
 
 
 def _artifact_base(
@@ -50,7 +50,7 @@ def package(
 ) -> None:
     """Package CPython release tarballs.
 
-    Creates two tarballs in ``dist/``:
+    Creates two tarballs in ``nanvix_zutil.paths.dist_dir()``:
     - ``cpython-<platform>-<mode>-<memory>.tar.gz`` — runtime sysroot + binary + ramfs
     - ``cpython-<platform>-<mode>-<memory>-buildroot.tar.gz`` — build dependencies
 
@@ -60,7 +60,7 @@ def package(
     """
     nanvix_home = Path(nanvix_home) if nanvix_home else Path(sysroot)
     release_staging = repo_root / ".nanvix" / "release"
-    dist_dir = repo_root / "dist"
+    dist_dir = paths.dist_dir()
     artifact = _artifact_base(platform, process_mode, memory_size)
 
     print("Packaging CPython release...")
@@ -223,7 +223,7 @@ def verify(
     expected contents.
     """
     artifact = _artifact_base(platform, process_mode, memory_size)
-    dist_dir = repo_root / "dist"
+    dist_dir = paths.dist_dir()
 
     print("Verifying release tarballs...")
 
