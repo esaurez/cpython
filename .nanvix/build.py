@@ -15,14 +15,9 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-import sys as _sys
-
-_sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _loader import load_sibling
-
-config = load_sibling("config", __file__)
-docker_mod = load_sibling("docker", __file__)
-lxml_mod = load_sibling("lxml", __file__)
+import _docker as docker_mod
+import config
+import lxml as lxml_mod
 
 
 def make_args(

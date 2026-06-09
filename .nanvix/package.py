@@ -14,15 +14,10 @@ import tarfile
 from pathlib import Path
 from typing import Any
 
-import sys as _sys
-
-_sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _loader import load_sibling
-
-config = load_sibling("config", __file__)
-build_mod = load_sibling("build", __file__)
-lxml_mod = load_sibling("lxml", __file__)
-ramfs_mod = load_sibling("ramfs", __file__)
+import build as build_mod
+import config
+import lxml as lxml_mod
+import ramfs as ramfs_mod
 
 
 def _artifact_base(

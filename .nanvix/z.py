@@ -24,18 +24,17 @@ Options:
 import os
 import shutil
 import sys
-
-# ---------------------------------------------------------------------------
-# Local modules (loaded via importlib since .nanvix/ is not a valid package name)
-# ---------------------------------------------------------------------------
-import sys as _sys
 import tempfile
 from pathlib import Path
 
+import _test as test_mod
+import build as build_mod
+import config
+import package as package_mod
 from nanvix_zutil import (
     CFG_SYSROOT,
-    TOOLCHAIN_CONTAINER_PATH,
     EXIT_MISSING_DEP,
+    TOOLCHAIN_CONTAINER_PATH,
     ZScript,
     log,
     make_initrd,
@@ -49,15 +48,6 @@ from nanvix_zutil.buildroot import (
 )
 from nanvix_zutil.github import resolve_release_with_fallback
 from nanvix_zutil.paths import nanvix_root, repo_root
-
-_sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _loader import load_sibling
-
-build_mod = load_sibling("build", __file__)
-config = load_sibling("config", __file__)
-docker_mod = load_sibling("docker", __file__)
-package_mod = load_sibling("package", __file__)
-test_mod = load_sibling("test", __file__)
 
 # ---------------------------------------------------------------------------
 # Path helpers
@@ -253,7 +243,9 @@ class CPythonBuild(ZScript):
             sysroot,
             toolchain,
             repo_root(),
-            **self._build_kwargs(release=release),
+            **self._build_kwargs(
+                release=release
+            ),  # pyright: ignore[reportArgumentType]
             run_fn=lambda *args, **kw: run(*args, docker=self.docker, **kw),  # type: ignore[arg-type]
             docker=self.docker is not None,
         )
@@ -275,7 +267,7 @@ class CPythonBuild(ZScript):
             sysroot,
             toolchain,
             repo_root(),
-            **kwargs,
+            **kwargs,  # pyright: ignore[reportArgumentType]
             nanvixd_extra=nanvixd_extra,
             run_fn=lambda *args, **kw: run(*args, docker=self.docker, **kw),  # type: ignore[arg-type]
             docker=self.docker is not None,
@@ -296,7 +288,7 @@ class CPythonBuild(ZScript):
             sysroot,
             toolchain,
             repo_root(),
-            **bench_kwargs,
+            **bench_kwargs,  # pyright: ignore[reportArgumentType]
             nanvixd_extra=nanvixd_extra,
             run_fn=lambda *args, **kw: run(*args, docker=self.docker, **kw),  # type: ignore[arg-type]
             docker=self.docker is not None,
@@ -312,15 +304,15 @@ class CPythonBuild(ZScript):
             sysroot,
             toolchain,
             repo_root(),
-            **kwargs,
+            **kwargs,  # pyright: ignore[reportArgumentType]
             run_fn=lambda *args, **kw: run(*args, docker=self.docker, **kw),  # type: ignore[arg-type]
             docker=self.docker is not None,
         )
         package_mod.verify(
             repo_root(),
-            platform=kwargs["platform"],
-            process_mode=kwargs["process_mode"],
-            memory_size=kwargs["memory_size"],
+            platform=kwargs["platform"],  # pyright: ignore[reportArgumentType]
+            process_mode=kwargs["process_mode"],  # pyright: ignore[reportArgumentType]
+            memory_size=kwargs["memory_size"],  # pyright: ignore[reportArgumentType]
         )
 
     def clean(self) -> None:
