@@ -15,12 +15,7 @@ import os
 import subprocess
 from pathlib import Path
 
-import sys as _sys
-
-_sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _loader import load_sibling
-
-config = load_sibling("config", __file__)
+import config
 
 
 def _workspace_id(workspace: Path) -> str:
@@ -84,12 +79,9 @@ def sync_sources(
     )
 
     rsync_excludes = " ".join(f"--exclude={e}" for e in config.DOCKER_TAR_EXCLUDES)
-    rsync_cmd = (
-        f"rsync -a --delete {rsync_excludes} " f"/mnt/host-workspace/ {build_dir}/"
-    )
+    rsync_cmd = f"rsync -a --delete {rsync_excludes} /mnt/host-workspace/ {build_dir}/"
     tar_cmd = (
-        f"cd /mnt/host-workspace && "
-        f"tar -cf - {excludes} . | tar -xf - -C {build_dir}"
+        f"cd /mnt/host-workspace && tar -cf - {excludes} . | tar -xf - -C {build_dir}"
     )
 
     return (
