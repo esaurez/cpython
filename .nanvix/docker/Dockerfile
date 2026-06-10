@@ -4,7 +4,7 @@
 # toolchain-python — Nanvix GCC toolchain + host Python 3 for CPython
 # cross-compilation.  Published as ghcr.io/nanvix/toolchain-python.
 
-FROM ghcr.io/nanvix/toolchain-gcc:sha-34a3641
+FROM ghcr.io/nanvix/toolchain-gcc:sha-3892efb
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
