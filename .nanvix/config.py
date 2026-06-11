@@ -67,6 +67,7 @@ def toolchain_paths(
         "libc": tc / f"{TOOLCHAIN_TRIPLET}" / "lib" / "libc.a",
         "libm": tc / f"{TOOLCHAIN_TRIPLET}" / "lib" / "libm.a",
         "libposix": sr / "lib" / "libposix.a",
+        "libcrt0": sr / "lib" / "libnvx_crt0.a",
         "libz": sr / "lib" / "libz.a",
         "libsqlite3": sr / "lib" / "libsqlite3.a",
         "libssl": sr / "lib" / "libssl.a",
@@ -96,7 +97,7 @@ def configure_env(toolchain: str | Path, sysroot: str | Path) -> dict[str, str]:
             f"-Wl,--export-dynamic -Wl,--no-dynamic-linker"
         ),
         "LIBS": (
-            f"-Wl,--start-group {tp['libposix']} {tp['libc']} {tp['libm']} "
+            f"-Wl,--start-group {tp['libcrt0']} {tp['libposix']} {tp['libc']} {tp['libm']} "
             f"-lsqlite3 -lssl -lcrypto -lz -lbz2 -llzma -lffi -Wl,--end-group"
         ),
         "LIBSQLITE3_LIBS": f"-L{sr}/lib -lsqlite3",
