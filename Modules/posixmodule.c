@@ -12356,7 +12356,7 @@ os_WSTOPSIG_impl(PyObject *module, int status)
 #endif /* HAVE_SYS_WAIT_H */
 
 
-#if defined(HAVE_FSTATVFS) && defined(HAVE_SYS_STATVFS_H)
+#if (defined(HAVE_FSTATVFS) || defined(HAVE_STATVFS)) && defined(HAVE_SYS_STATVFS_H)
 #ifdef _SCO_DS
 /* SCO OpenServer 5.0 and later requires _SVID3 before it reveals the
    needed definitions in sys/statvfs.h */
@@ -12420,6 +12420,7 @@ _pystatvfs_fromstructstatvfs(PyObject *module, struct statvfs st) {
 }
 
 
+#ifdef HAVE_FSTATVFS
 /*[clinic input]
 os.fstatvfs
     fd: int
@@ -12449,7 +12450,8 @@ os_fstatvfs_impl(PyObject *module, int fd)
 
     return _pystatvfs_fromstructstatvfs(module, st);
 }
-#endif /* defined(HAVE_FSTATVFS) && defined(HAVE_SYS_STATVFS_H) */
+#endif /* HAVE_FSTATVFS */
+#endif /* (defined(HAVE_FSTATVFS) || defined(HAVE_STATVFS)) && defined(HAVE_SYS_STATVFS_H) */
 
 
 #if defined(HAVE_STATVFS) && defined(HAVE_SYS_STATVFS_H)
