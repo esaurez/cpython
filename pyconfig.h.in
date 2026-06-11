@@ -998,6 +998,9 @@
 /* Define to 1 if you have the `renameat' function. */
 #undef HAVE_RENAMEAT
 
+/* Define to 1 if you have the `rewinddir' function. */
+#undef HAVE_REWINDDIR
+
 /* Define if readline supports append_history */
 #undef HAVE_RL_APPEND_HISTORY
 

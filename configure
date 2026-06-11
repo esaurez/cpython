@@ -18235,6 +18235,12 @@ then :
   printf "%s\n" "#define HAVE_RENAMEAT 1" >>confdefs.h
 
 fi
+ac_fn_c_check_func "$LINENO" "rewinddir" "ac_cv_func_rewinddir"
+if test "x$ac_cv_func_rewinddir" = xyes
+then :
+  printf "%s\n" "#define HAVE_REWINDDIR 1" >>confdefs.h
+
+fi
 ac_fn_c_check_func "$LINENO" "rtpSpawn" "ac_cv_func_rtpSpawn"
 if test "x$ac_cv_func_rtpSpawn" = xyes
 then :

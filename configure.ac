@@ -4914,6 +4914,7 @@ AC_CHECK_FUNCS([ \
   pipe2 plock poll posix_fadvise posix_fallocate posix_spawn posix_spawnp \
   pread preadv preadv2 pthread_condattr_setclock pthread_init pthread_kill \
   pwrite pwritev pwritev2 readlink readlinkat readv realpath renameat \
+  rewinddir \
   rtpSpawn sched_get_priority_max sched_rr_get_interval sched_setaffinity \
   sched_setparam sched_setscheduler sem_clockwait sem_getvalue sem_open \
   sem_timedwait sem_unlink sendfile setegid seteuid setgid sethostname \
