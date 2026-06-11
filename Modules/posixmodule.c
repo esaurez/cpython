@@ -4324,7 +4324,7 @@ _posix_listdir(path_t *path, PyObject *list)
 exit:
     if (dirp != NULL) {
         Py_BEGIN_ALLOW_THREADS
-#ifdef HAVE_FDOPENDIR
+#if defined(HAVE_FDOPENDIR) && defined(HAVE_REWINDDIR)
         if (fd > -1)
             rewinddir(dirp);
 #endif
@@ -15262,7 +15262,7 @@ ScandirIterator_closedir(ScandirIterator *iterator)
 
     iterator->dirp = NULL;
     Py_BEGIN_ALLOW_THREADS
-#ifdef HAVE_FDOPENDIR
+#if defined(HAVE_FDOPENDIR) && defined(HAVE_REWINDDIR)
     if (iterator->path.fd != -1)
         rewinddir(dirp);
 #endif
