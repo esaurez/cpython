@@ -238,11 +238,18 @@ else
 	$(MAKE) install DESTDIR="$(DESTDIR)"
 endif
 
+
 # Clean target
 clean:
-	-$(MAKE) clean 2>/dev/null || true
+	set -e; \
+	TEMPDIR=$$(mktemp -d); \
+	mv .nanvix/ "$$TEMPDIR"; \
+	$(MAKE) clean 2>/dev/null || true; \
+	mv "$$TEMPDIR/.nanvix" ./; \
+	rm -rf "$$TEMPDIR"
 	rm -f $(CONFIGURED_MARKER)
 	rm -f python$(EXE)
+
 
 # Distclean target
 distclean: clean
