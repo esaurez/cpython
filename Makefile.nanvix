@@ -250,7 +250,7 @@ CONFIGURE_OPTS = \
 	ac_cv_func_getsockname=yes \
 	ac_cv_func_inet_aton=no \
 	ac_cv_func_inet_ntoa=yes \
-	ac_cv_func_inet_pton=no
+	ac_cv_func_inet_pton=yes
 
 # Marker file to track if configure has been run
 CONFIGURED_MARKER = .nanvix-configured
