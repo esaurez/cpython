@@ -36,6 +36,110 @@ ramfs_mod = load_sibling("ramfs", __file__)
 
 
 # ---------------------------------------------------------------------------
+# .so sanity checks per module group
+# ---------------------------------------------------------------------------
+#
+# Single source of truth for the smoke-test snippets that exercise every
+# stdlib extension migrated from .a to .so. Each entry maps a log tag
+# (used as the line prefix CPYTHON_TEST_<TAG>:) to a list of
+# (module_name, check_expr) tuples; check_expr is a Python expression
+# evaluated with the imported module bound to `m` and must return truthy.
+
+_SO_MODULE_SANITY_CHECKS: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
+    (
+        "CPYTHON_TEST_DATA_PRIMITIVES",
+        (
+            ("_bisect", "m.bisect_left([1, 3, 5], 4) == 2"),
+            ("_heapq", "m.heappush([], 1) is None"),
+            ("_struct", "m.pack('i', 42) == b'\\x2a\\x00\\x00\\x00'"),
+            ("_random", "hasattr(m, 'Random')"),
+            ("_opcode", "hasattr(m, 'stack_effect')"),
+            ("_queue", "hasattr(m, 'SimpleQueue')"),
+            ("_csv", "hasattr(m, 'reader')"),
+            ("binascii", "m.hexlify(b'\\xab') == b'ab'"),
+            ("_json", "hasattr(m, 'encode_basestring_ascii')"),
+            ("_pickle", "hasattr(m, 'Pickler')"),
+            ("_zoneinfo", "hasattr(m, 'ZoneInfo')"),
+        ),
+    ),
+    (
+        "CPYTHON_TEST_MATH",
+        (
+            ("math", "abs(m.sqrt(4.0) - 2.0) < 1e-9"),
+            ("cmath", "abs(m.sqrt(complex(-1)) - complex(0, 1)) < 1e-9"),
+            ("_statistics", "hasattr(m, '_normal_dist_inv_cdf')"),
+            ("mmap", "hasattr(m, 'mmap')"),
+            ("_contextvars", "hasattr(m, 'ContextVar')"),
+        ),
+    ),
+    (
+        "CPYTHON_TEST_CODECS",
+        (
+            ("unicodedata", "m.lookup('LATIN SMALL LETTER A') == 'a'"),
+            ("_multibytecodec", "hasattr(m, '__create_codec')"),
+            ("_codecs_cn", "hasattr(m, 'getcodec')"),
+            ("_codecs_hk", "hasattr(m, 'getcodec')"),
+            ("_codecs_iso2022", "hasattr(m, 'getcodec')"),
+            ("_codecs_jp", "hasattr(m, 'getcodec')"),
+            ("_codecs_kr", "hasattr(m, 'getcodec')"),
+            ("_codecs_tw", "hasattr(m, 'getcodec')"),
+        ),
+    ),
+    (
+        "CPYTHON_TEST_BUNDLED_DEPS",
+        (
+            ("_asyncio", "hasattr(m, 'Future')"),
+            ("_datetime", "hasattr(m, 'datetime_CAPI')"),
+            ("_decimal", "m.Decimal('1.1') + m.Decimal('2.2') == m.Decimal('3.3')"),
+            ("pyexpat", "hasattr(m, 'ParserCreate')"),
+            ("_elementtree", "hasattr(m, 'XMLParser')"),
+            ("_md5", "hasattr(m, 'md5')"),
+            ("_sha1", "hasattr(m, 'sha1')"),
+            ("_sha2", "hasattr(m, 'sha256')"),
+            ("_sha3", "hasattr(m, 'sha3_256')"),
+            ("_blake2", "hasattr(m, 'blake2b')"),
+            ("select", "hasattr(m, 'select')"),
+            ("_socket", "hasattr(m, 'socket')"),
+            ("_posixsubprocess", "hasattr(m, 'fork_exec')"),
+            ("fcntl", "hasattr(m, 'fcntl')"),
+            ("termios", "hasattr(m, 'tcgetattr')"),
+        ),
+    ),
+)
+
+
+def _render_so_sanity_snippets(
+    checks: tuple[
+        tuple[str, tuple[tuple[str, str], ...]], ...
+    ] = _SO_MODULE_SANITY_CHECKS,
+) -> str:
+    """Emit the Python source that exercises every (module, check_expr)
+    pair in ``checks`` and prints ``<log_tag>: <module> loaded via
+    dlopen from <file>`` for each. Each module is asserted NOT to be in
+    ``sys.builtin_module_names`` so a silent built-in fallback fails
+    the test (which would mean Setup.local's *shared* declaration was
+    ignored).
+    """
+    parts: list[str] = []
+    for log_tag, modules in checks:
+        items = ",\n".join(
+            f"    ({name!r}, lambda m: {check})" for name, check in modules
+        )
+        parts.append(
+            f"_so_checks = [\n{items},\n]\n"
+            "for _name, _check in _so_checks:\n"
+            "    _mod = __import__(_name)\n"
+            "    assert _name not in sys.builtin_module_names, "
+            "f'{_name} still built-in!'\n"
+            "    assert _check(_mod), f'{_name} sanity check failed'\n"
+            f"    print(f'{log_tag}: "
+            "{_name} loaded via dlopen from "
+            "{_mod.__file__}')\n"
+        )
+    return "".join(parts)
+
+
+# ---------------------------------------------------------------------------
 # Initrd creation helper (standalone mode)
 # ---------------------------------------------------------------------------
 
@@ -481,6 +585,7 @@ def stage(
         "print('CPYTHON_TEST_HELLO: Hello from Python', sys.version_info[:2])\n"
         "print('CPYTHON_TEST_PLATFORM:', sys.platform)\n"
         + array_snippet
+        + _render_so_sanity_snippets()
         + (lxml_snippet if standalone else ""),
     )
 

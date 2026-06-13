@@ -3831,7 +3831,7 @@ AS_VAR_IF([with_system_expat], [yes], [
   LIBEXPAT_INTERNAL=
 ], [
   LIBEXPAT_CFLAGS="-I\$(srcdir)/Modules/expat"
-  LIBEXPAT_LDFLAGS="-lm \$(LIBEXPAT_A)"
+  LIBEXPAT_LDFLAGS="\$(LIBM) \$(LIBEXPAT_A)"
   LIBEXPAT_INTERNAL="\$(LIBEXPAT_HEADERS) \$(LIBEXPAT_A)"
 ])
 
@@ -3915,7 +3915,7 @@ AS_VAR_IF([with_system_libmpdec], [yes], [
   LIBMPDEC_INTERNAL=
 ], [
   LIBMPDEC_CFLAGS="-I\$(srcdir)/Modules/_decimal/libmpdec"
-  LIBMPDEC_LDFLAGS="-lm \$(LIBMPDEC_A)"
+  LIBMPDEC_LDFLAGS="\$(LIBM) \$(LIBMPDEC_A)"
   LIBMPDEC_INTERNAL="\$(LIBMPDEC_HEADERS) \$(LIBMPDEC_A)"
 
   dnl Disable forced inlining in debug builds, see GH-94847

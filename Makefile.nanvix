@@ -219,7 +219,7 @@ CONFIGURE_OPTS = \
 	--with-build-python="$(BUILD_PYTHON)" \
 	$(if $(filter yes,$(NANVIX_RELEASE)),--disable-test-modules,) \
 	--with-libc="$(LIBC)" \
-	--with-libm="$(LIBM)" \
+	--with-libm= \
 	--prefix="$(INSTALL_PREFIX)" \
 	--exec-prefix="$(INSTALL_PREFIX)" \
 	--with-ensurepip=no \
