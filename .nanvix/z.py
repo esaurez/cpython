@@ -79,15 +79,15 @@ _CFG_LOCAL_NANVIX = "local_nanvix_path"
 
 # Map dependency names to the library files they install into buildroot/lib.
 _DEP_EXPECTED_LIBS: dict[str, list[str]] = {
-    "bzip2": ["libbz2.a"],
+    "bzip2": ["libbz2.a", "libbz2.so"],
     "libffi": ["libffi.a", "libffi.so"],
-    "zlib": ["libz.a"],
-    "sqlite": ["libsqlite3.a"],
+    "zlib": ["libz.a", "libz.so"],
+    "sqlite": ["libsqlite3.a", "libsqlite3.so"],
     "openssl": ["libssl.a", "libcrypto.a", "libssl.so", "libcrypto.so"],
     "libxml2": ["libxml2.a"],
     "libxslt": ["libxslt.a", "libexslt.a"],
     "lxml": ["liblxml_etree.a", "liblxml_elementpath.a"],
-    "xz": ["liblzma.a"],
+    "xz": ["liblzma.a", "liblzma.so"],
 }
 
 

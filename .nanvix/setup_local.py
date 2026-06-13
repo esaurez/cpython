@@ -277,25 +277,21 @@ SETUP_LOCAL_ENTRIES: tuple[SetupEntry, ...] = (
     SetupEntry(name="termios", linkage=Linkage.SHARED, tokens=("termios.c",)),
     # ---------------- Modules with external Nanvix-ported deps ---------
     #
-    # libffi, libssl, libcrypto each ship as a .so under $(SYSROOT)/lib/
-    # and the consuming extension .so (_ctypes, _ssl, _hashlib)
-    # references it via DT_NEEDED. The loader resolves them at dlopen
-    # time and binds UND symbols against python.elf .dynsym.
-    #
-    # _bz2 / _lzma / zlib / _sqlite3 are intentionally NOT moved here:
-    # the Nanvix port repos for libbz2 / liblzma / libz / libsqlite3 do
-    # not yet ship .so builds, so those four extensions stay statically
-    # built into python.elf (cpython upstream default) until the
-    # follow-up PR that lands alongside the Wave 6 port-repo .so PRs.
+    # libffi / libssl / libcrypto / libbz2 / liblzma / libz / libsqlite3
+    # each ship as a .so under $(SYSROOT)/lib/ and the consuming
+    # extension .so emits DT_NEEDED for it; the Nanvix dynamic loader
+    # walks the chain at dlopen time and binds UND symbols against
+    # python.elf .dynsym. This matches the upstream cpython behavior
+    # when configure is invoked with system-library detection enabled
+    # (the default on every Linux distro).
     SetupEntry(
         name="_ssl",
         linkage=Linkage.SHARED,
         tokens=("_ssl.c",),
         section_header=(
-            "Stdlib modules with external Nanvix-ported deps that are "
-            "already shipped as .so by their respective port repos. "
-            "Each .so emits DT_NEEDED for the corresponding sysroot "
-            "library; the loader walks the chain at dlopen time."
+            "Stdlib modules with external Nanvix-ported deps. Each .so "
+            "emits DT_NEEDED for the corresponding sysroot library; the "
+            "loader walks the chain at dlopen time."
         ),
     ),
     SetupEntry(name="_hashlib", linkage=Linkage.SHARED, tokens=("_hashopenssl.c",)),
@@ -308,6 +304,24 @@ SETUP_LOCAL_ENTRIES: tuple[SetupEntry, ...] = (
             "_ctypes/callproc.c",
             "_ctypes/stgdict.c",
             "_ctypes/cfield.c",
+        ),
+    ),
+    SetupEntry(name="_bz2", linkage=Linkage.SHARED, tokens=("_bz2module.c",)),
+    SetupEntry(name="_lzma", linkage=Linkage.SHARED, tokens=("_lzmamodule.c",)),
+    SetupEntry(name="zlib", linkage=Linkage.SHARED, tokens=("zlibmodule.c",)),
+    SetupEntry(
+        name="_sqlite3",
+        linkage=Linkage.SHARED,
+        tokens=(
+            "_sqlite/blob.c",
+            "_sqlite/connection.c",
+            "_sqlite/cursor.c",
+            "_sqlite/microprotocols.c",
+            "_sqlite/module.c",
+            "_sqlite/prepare_protocol.c",
+            "_sqlite/row.c",
+            "_sqlite/statement.c",
+            "_sqlite/util.c",
         ),
     ),
 )
