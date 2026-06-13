@@ -202,18 +202,14 @@ SETUP_LOCAL_ENTRIES: tuple[SetupEntry, ...] = (
     # their own _hacl translation units rather than linking a shared
     # libHacl_Hash_*.a -- same shape as upstream.
     SetupEntry(
-        name="_asyncio",
+        name="_decimal",
         linkage=Linkage.SHARED,
-        tokens=("_asynciomodule.c",),
+        tokens=("_decimal/_decimal.c",),
         section_header=(
             "Modules with bundled-in-cpython C deps. Each .so bundles "
             "its own vendored .a, matching upstream cpython's default "
             "./configure behavior."
         ),
-    ),
-    SetupEntry(name="_datetime", linkage=Linkage.SHARED, tokens=("_datetimemodule.c",)),
-    SetupEntry(
-        name="_decimal", linkage=Linkage.SHARED, tokens=("_decimal/_decimal.c",)
     ),
     SetupEntry(name="pyexpat", linkage=Linkage.SHARED, tokens=("pyexpat.c",)),
     SetupEntry(name="_elementtree", linkage=Linkage.SHARED, tokens=("_elementtree.c",)),
@@ -268,6 +264,23 @@ SETUP_LOCAL_ENTRIES: tuple[SetupEntry, ...] = (
             "_blake2/blake2s_impl.c",
         ),
     ),
+    # ---------------- POSIX syscall wrappers + concurrency primitives ---
+    #
+    # No external or bundled C deps -- these are thin POSIX/syscall
+    # wrappers plus _asyncio / _datetime, all matching upstream
+    # Modules/Setup.stdlib.in's "Modules with some UNIX dependencies"
+    # grouping. libc / libm symbols (if any) resolve against
+    # python.elf .dynsym at dlopen time via --export-dynamic.
+    SetupEntry(
+        name="_asyncio",
+        linkage=Linkage.SHARED,
+        tokens=("_asynciomodule.c",),
+        section_header=(
+            "POSIX syscall wrappers + _asyncio / _datetime "
+            "(no external or bundled deps)."
+        ),
+    ),
+    SetupEntry(name="_datetime", linkage=Linkage.SHARED, tokens=("_datetimemodule.c",)),
     SetupEntry(name="select", linkage=Linkage.SHARED, tokens=("selectmodule.c",)),
     SetupEntry(name="_socket", linkage=Linkage.SHARED, tokens=("socketmodule.c",)),
     SetupEntry(
