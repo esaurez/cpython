@@ -87,10 +87,6 @@ ifdef CONFIG_NANVIX
     LIBC := $(DOCKER_TOOLCHAIN_PATH)/i686-nanvix/lib/libc.a
     LIBM := $(DOCKER_TOOLCHAIN_PATH)/i686-nanvix/lib/libm.a
     LIBPOSIX := $(DOCKER_SYSROOT_PATH)/lib/libposix.a
-    LIBZ := $(DOCKER_SYSROOT_PATH)/lib/libz.a
-    LIBSQLITE3 := $(DOCKER_SYSROOT_PATH)/lib/libsqlite3.a
-    LIBSSL := $(DOCKER_SYSROOT_PATH)/lib/libssl.a
-    LIBCRYPTO := $(DOCKER_SYSROOT_PATH)/lib/libcrypto.a
     # libnvx_crt0 ships the executable startup symbols (`_do_start`, `_start`,
     # `c_trampoline`).  It must be present in the Nanvix sysroot ahead of this
     # cpython build; the existence check below fails loudly when it is not.
@@ -102,10 +98,6 @@ ifdef CONFIG_NANVIX
     LIBC := $(NANVIX_TOOLCHAIN)/i686-nanvix/lib/libc.a
     LIBM := $(NANVIX_TOOLCHAIN)/i686-nanvix/lib/libm.a
     LIBPOSIX := $(abspath $(NANVIX_HOME))/lib/libposix.a
-    LIBZ := $(abspath $(NANVIX_HOME))/lib/libz.a
-    LIBSQLITE3 := $(abspath $(NANVIX_HOME))/lib/libsqlite3.a
-    LIBSSL := $(abspath $(NANVIX_HOME))/lib/libssl.a
-    LIBCRYPTO := $(abspath $(NANVIX_HOME))/lib/libcrypto.a
     LIBNVX_CRT0 := $(abspath $(NANVIX_HOME))/lib/libnvx_crt0.a
     BUILD_PYTHON := $(NANVIX_TOOLCHAIN)/bin/python3
   endif
