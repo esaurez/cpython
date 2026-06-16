@@ -22,7 +22,7 @@ from _loader import load_sibling
 
 config = load_sibling("config", __file__)
 docker_mod = load_sibling("docker", __file__)
-lxml_mod = load_sibling("lxml", __file__)
+setup_local_mod = load_sibling("setup_local", __file__)
 
 
 def make_args(
@@ -115,7 +115,7 @@ def build(
         return
     effective_sysroot = config.DOCKER_SYSROOT_PATH if docker else sysroot
     effective_toolchain = config.DOCKER_TOOLCHAIN_PATH if docker else toolchain
-    lxml_mod.generate_setup_local(repo_root, Path(effective_sysroot))
+    setup_local_mod.generate_setup_local(repo_root, Path(effective_sysroot))
     args = make_args(
         effective_sysroot,
         effective_toolchain,

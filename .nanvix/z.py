@@ -29,7 +29,6 @@ import sys
 # Local modules (loaded via importlib since .nanvix/ is not a valid package name)
 # ---------------------------------------------------------------------------
 import sys as _sys
-import tempfile
 from pathlib import Path
 
 from nanvix_zutil import (
@@ -84,9 +83,6 @@ _DEP_EXPECTED_LIBS: dict[str, list[str]] = {
     "zlib": ["libz.a"],
     "sqlite": ["libsqlite3.a"],
     "openssl": ["libssl.a", "libcrypto.a"],
-    "libxml2": ["libxml2.a"],
-    "libxslt": ["libxslt.a", "libexslt.a"],
-    "lxml": ["liblxml_etree.a", "liblxml_elementpath.a"],
     "xz": ["liblzma.a"],
 }
 
@@ -342,14 +338,7 @@ class CPythonBuild(ZScript):
             if not expected:
                 continue
             libs_present = all((lib_dir / lib).exists() for lib in expected)
-            # For lxml, also require the python-packages payload.
-            if dep.name == "lxml":
-                pkg_present = (
-                    buildroot / "python-packages" / "lxml" / "__init__.py"
-                ).exists()
-                if libs_present and pkg_present:
-                    continue
-            elif libs_present:
+            if libs_present:
                 continue
             resolved = suffix_dep(dep, nanvix_version) if nanvix_version else dep
             self._download_dep_fallback(resolved, buildroot)
@@ -369,7 +358,6 @@ class CPythonBuild(ZScript):
           when the exact tag is missing).
         - Multiple deployment-mode candidates (standalone, single-process,
           multi-process).
-        - Extraction of ``python-packages/`` payload (e.g. lxml).
         """
         dep_name = dep.name
         repo = dep.repo
@@ -433,69 +421,6 @@ class CPythonBuild(ZScript):
         if not installed:
             log.warning(f"No compatible fallback asset for {dep_name}")
             return
-
-        # --- CPython-specific: extract python-packages/ (e.g. lxml) ---
-        cache_dir = buildroot.parent / "cache"
-        asset_prefix = f"{dep_name}-{platform}-"
-        for cached in sorted(cache_dir.iterdir()) if cache_dir.is_dir() else []:
-            if not cached.name.startswith(asset_prefix):
-                continue
-            self._extract_python_packages(cached, buildroot)
-            break
-
-    def _extract_python_packages(self, asset_path: Path, buildroot: Path) -> None:
-        """Extract ``python-packages/`` from an archive into *buildroot*."""
-        import tarfile
-        import zipfile
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            extract_dir = Path(tmpdir) / "extracted"
-            extract_dir.mkdir()
-
-            if zipfile.is_zipfile(asset_path):
-                with zipfile.ZipFile(asset_path) as zf:
-                    for member in zf.namelist():
-                        if "python-packages" not in member:
-                            continue
-                        if os.path.isabs(member) or ".." in member.split("/"):
-                            continue
-                        dest = (extract_dir / member).resolve()
-                        if not dest.is_relative_to(extract_dir.resolve()):
-                            continue
-                        zf.extract(member, extract_dir)
-            else:
-                with tarfile.open(str(asset_path), "r:*") as tf:
-                    pkg_members = [
-                        m
-                        for m in tf.getmembers()
-                        if "python-packages" in m.name
-                        and not os.path.isabs(m.name)
-                        and ".." not in m.name.split("/")
-                    ]
-                    if not pkg_members:
-                        return
-                    try:
-                        tf.extractall(
-                            str(extract_dir), members=pkg_members, filter="data"
-                        )
-                    except TypeError:
-                        tf.extractall(str(extract_dir), members=pkg_members)
-
-            for pkg_src in extract_dir.rglob("python-packages"):
-                if not pkg_src.is_dir():
-                    continue
-                pkg_dst = buildroot / "python-packages"
-                pkg_dst.mkdir(parents=True, exist_ok=True)
-                for item in pkg_src.iterdir():
-                    target = pkg_dst / item.name
-                    if item.is_dir():
-                        if target.exists():
-                            shutil.rmtree(target)
-                        shutil.copytree(item, target)
-                    else:
-                        shutil.copy2(item, target)
-                log.info(f"Installed python packages from {asset_path.name}")
-                break
 
 
 if __name__ == "__main__":

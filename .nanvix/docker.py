@@ -286,7 +286,7 @@ def _generate_setup_local_cmd() -> str:
     """Shell command to generate Modules/Setup.local inside the container.
 
     Rendered from .nanvix/setup_local.py (single source of truth shared
-    with the host build path .nanvix/lxml.py::generate_setup_local).
+    with the host build path .nanvix/setup_local.py::generate_setup_local).
     The rendered file body is emitted via a single ``printf '%s\\n' ...``
     invocation with each line single-quoted for the container shell.
     """

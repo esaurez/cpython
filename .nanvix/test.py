@@ -31,7 +31,6 @@ from _loader import load_sibling
 
 config = load_sibling("config", __file__)
 build_mod = load_sibling("build", __file__)
-lxml_mod = load_sibling("lxml", __file__)
 ramfs_mod = load_sibling("ramfs", __file__)
 
 
@@ -547,11 +546,7 @@ def stage(
         )
 
     # Copy test script — a simple smoke test that validates the interpreter.
-    # The lxml import test is only included for standalone mode because
-    # xmlInitParser() hangs in multi-process/single-process modes where
-    # filesystem I/O goes through nanvixd's virtualized host-FS layer.
     hello_script = sysroot_dir / "test_hello.py"
-    standalone = process_mode == "standalone"
     # Phase 0 of the .a -> .so migration: `array` is now a shared
     # extension at lib/python3.12/lib-dynload/array.cpython-312.so
     # (built from `*shared* array arraymodule.c` in Setup.local).
@@ -567,26 +562,12 @@ def stage(
         "print(f'CPYTHON_TEST_ARRAY_SO: array loaded via dlopen from "
         "{array.__file__}')\n"
     )
-    lxml_snippet = (
-        "try:\n"
-        "    import lxml.etree\n"
-        "    doc = lxml.etree.fromstring(b'<root><child>lxml OK</child></root>')\n"
-        "    assert doc.tag == 'root'\n"
-        "    assert doc[0].text == 'lxml OK'\n"
-        "    print('CPYTHON_TEST_LXML: lxml.etree import and parse OK')\n"
-        "except ImportError as e:\n"
-        "    print(f'CPYTHON_TEST_LXML_SKIP: {e}')\n"
-        "except Exception as e:\n"
-        "    print(f'CPYTHON_TEST_LXML_FAIL: {e}')\n"
-        "    sys.exit(1)\n"
-    )
     hello_script.write_text(
         "import sys\n"
         "print('CPYTHON_TEST_HELLO: Hello from Python', sys.version_info[:2])\n"
         "print('CPYTHON_TEST_PLATFORM:', sys.platform)\n"
         + array_snippet
-        + _render_so_sanity_snippets()
-        + (lxml_snippet if standalone else ""),
+        + _render_so_sanity_snippets(),
     )
 
     # Copy the HTTP server smoke-test script from the repo root into the
@@ -823,8 +804,6 @@ def run_hello(
     environment variable syntax.  Multi-process and single-process modes
     use direct host-filesystem access (no ramfs).
     """
-    standalone = process_mode == "standalone"
-
     print(f"Test: Hello world ({process_mode})...")
 
     returncode, output, elapsed_ms = _run_nanvixd_script(
@@ -846,25 +825,17 @@ def run_hello(
 
     # Validate output.
     found_hello = False
-    found_lxml = False
     for line in output.splitlines():
         if line.startswith("CPYTHON_TEST_"):
             tag = line.split(":")[0].replace("CPYTHON_TEST_", "")
             print(f"  {tag}: {line.strip()}")
             if tag == "HELLO":
                 found_hello = True
-            elif tag in ("LXML", "LXML_SKIP"):
-                found_lxml = True
 
     if not found_hello:
         print("  FAIL: Hello test did not produce expected output")
         print(output)
         raise RuntimeError("Hello test did not produce expected output")
-
-    if standalone and not found_lxml:
-        # lxml staging is best-effort — if the runtime package was not
-        # available (e.g. release asset missing), the test is non-fatal.
-        print("  WARNING: lxml import/parse test did not produce expected output")
 
     print("  PASS")
 
@@ -1194,7 +1165,6 @@ def run_all(
         run_fn=run_fn,
         docker=docker,
     )
-    lxml_mod.stage_lxml_runtime(repo_root, staging / "sysroot")
 
     # Ramfs — only needed for standalone mode.  Multi-process and
     # single-process use host-filesystem access (no ramfs).
