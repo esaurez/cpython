@@ -31,10 +31,18 @@ from typing import Iterable
 #   _ssl.cpython-312.so              -> libssl.so + libcrypto.so
 #     libssl.so                      -> libcrypto.so
 #   _hashlib.cpython-312.so          -> libcrypto.so
+#   _bz2.cpython-312.so              -> libbz2.so
+#   _lzma.cpython-312.so             -> liblzma.so
+#   zlib.cpython-312.so              -> libz.so
+#   _sqlite3.cpython-312.so          -> libsqlite3.so
 REQUIRED_RUNTIME_SOS: tuple[str, ...] = (
     "libffi.so",
     "libcrypto.so",
     "libssl.so",
+    "libbz2.so",
+    "liblzma.so",
+    "libz.so",
+    "libsqlite3.so",
 )
 
 

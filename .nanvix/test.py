@@ -114,6 +114,11 @@ _SO_MODULE_SANITY_CHECKS: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = 
             ("_ssl", "hasattr(m, 'RAND_bytes')"),
             ("_hashlib", "hasattr(m, 'openssl_sha256') or hasattr(m, 'new')"),
             ("_ctypes", "hasattr(m, 'dlopen')"),
+            # libbz2 / liblzma / libz / libsqlite3: same DT_NEEDED model.
+            ("_bz2", "m.BZ2Compressor().compress(b'hello') is not None"),
+            ("_lzma", "hasattr(m, 'LZMACompressor')"),
+            ("zlib", "m.crc32(b'hello') == 0x3610a686"),
+            ("_sqlite3", "hasattr(m, 'connect')"),
         ),
     ),
 )
