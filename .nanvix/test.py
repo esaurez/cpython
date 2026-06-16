@@ -33,6 +33,7 @@ config = load_sibling("config", __file__)
 build_mod = load_sibling("build", __file__)
 lxml_mod = load_sibling("lxml", __file__)
 ramfs_mod = load_sibling("ramfs", __file__)
+runtime_sos_mod = load_sibling("runtime_sos", __file__)
 
 
 # ---------------------------------------------------------------------------
@@ -103,6 +104,16 @@ _SO_MODULE_SANITY_CHECKS: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = 
             ("_posixsubprocess", "hasattr(m, 'fork_exec')"),
             ("fcntl", "hasattr(m, 'fcntl')"),
             ("termios", "hasattr(m, 'tcgetattr')"),
+        ),
+    ),
+    (
+        "CPYTHON_TEST_EXTERNAL_DEPS",
+        (
+            # libffi / libssl / libcrypto: each consumed via DT_NEEDED of
+            # the corresponding sysroot/lib/<name>.so.
+            ("_ssl", "hasattr(m, 'RAND_bytes')"),
+            ("_hashlib", "hasattr(m, 'openssl_sha256') or hasattr(m, 'new')"),
+            ("_ctypes", "hasattr(m, 'dlopen')"),
         ),
     ),
 )
@@ -521,6 +532,16 @@ def stage(
             )
 
     sysroot_dir = staging / "sysroot"
+
+    # Stage the libffi + libssl/libcrypto shared libraries from the
+    # buildroot into the test sysroot at sysroot/lib/<name>.so so the
+    # corresponding C extensions can dlopen them at runtime (see
+    # .nanvix/runtime_sos.py for the DT_NEEDED chain).
+    runtime_sos_mod.stage_runtime_sos(
+        repo_root / ".nanvix" / "buildroot" / "lib",
+        sysroot_dir / "lib",
+        target_label="test sysroot",
+    )
 
     # Ensure _sysconfigdata module is present in the installed sysroot.
     # make install should copy it from build/<pybuilddir>/ but this can

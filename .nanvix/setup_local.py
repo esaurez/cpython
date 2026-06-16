@@ -275,6 +275,41 @@ SETUP_LOCAL_ENTRIES: tuple[SetupEntry, ...] = (
     ),
     SetupEntry(name="fcntl", linkage=Linkage.SHARED, tokens=("fcntlmodule.c",)),
     SetupEntry(name="termios", linkage=Linkage.SHARED, tokens=("termios.c",)),
+    # ---------------- Modules with external Nanvix-ported deps ---------
+    #
+    # libffi, libssl, libcrypto each ship as a .so under $(SYSROOT)/lib/
+    # and the consuming extension .so (_ctypes, _ssl, _hashlib)
+    # references it via DT_NEEDED. The loader resolves them at dlopen
+    # time and binds UND symbols against python.elf .dynsym.
+    #
+    # _bz2 / _lzma / zlib / _sqlite3 are intentionally NOT moved here:
+    # the Nanvix port repos for libbz2 / liblzma / libz / libsqlite3 do
+    # not yet ship .so builds, so those four extensions stay statically
+    # built into python.elf (cpython upstream default) until the
+    # follow-up PR that lands alongside the Wave 6 port-repo .so PRs.
+    SetupEntry(
+        name="_ssl",
+        linkage=Linkage.SHARED,
+        tokens=("_ssl.c",),
+        section_header=(
+            "Stdlib modules with external Nanvix-ported deps that are "
+            "already shipped as .so by their respective port repos. "
+            "Each .so emits DT_NEEDED for the corresponding sysroot "
+            "library; the loader walks the chain at dlopen time."
+        ),
+    ),
+    SetupEntry(name="_hashlib", linkage=Linkage.SHARED, tokens=("_hashopenssl.c",)),
+    SetupEntry(
+        name="_ctypes",
+        linkage=Linkage.SHARED,
+        tokens=(
+            "_ctypes/_ctypes.c",
+            "_ctypes/callbacks.c",
+            "_ctypes/callproc.c",
+            "_ctypes/stgdict.c",
+            "_ctypes/cfield.c",
+        ),
+    ),
 )
 
 

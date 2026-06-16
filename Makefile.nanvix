@@ -185,11 +185,17 @@ endif
 # which libnvx_crt0 is the sole provider. Listing it first today keeps
 # python.elf using a consistent `_start` source across both states.
 #
-# `LIBS` segment 2 (`--start-group ... --end-group`): the external add-on
-# libraries (sqlite3, ssl, crypto, z, bz2, lzma, ffi). The group is needed
-# only for their inter-archive circular dependencies; they resolve symbols
-# from libposix/libc/libm/libstdc++ against the already-embedded objects
-# from segment 1.
+# `LIBS` segment 2 (`--start-group ... --end-group`): the external
+# Nanvix-ported libraries (`-lsqlite3 -lz -lbz2 -llzma`) whose .a files
+# stay statically linked into python.elf. The corresponding extensions
+# (_sqlite3, zlib, _bz2, _lzma) remain *static* in Setup.local for now
+# because the Nanvix port repos for libbz2 / libz / liblzma /
+# libsqlite3 do not yet ship .so builds. The follow-up cpython PR that
+# lands alongside the Wave 6 port-repo .so PRs migrates these four
+# extensions to *shared* with DT_NEEDED references to lib*.so. -lssl
+# / -lcrypto / -lffi are NOT in this list -- they ship as separate .so
+# files under sysroot/lib/ and are referenced via DT_NEEDED by their
+# consumer .so modules (_ssl, _hashlib, _ctypes).
 CONFIGURE_ENV = \
 	CC="$(TOOLCHAIN_PREFIX)/bin/i686-nanvix-gcc" \
 	CXX="$(TOOLCHAIN_PREFIX)/bin/i686-nanvix-g++" \
@@ -199,7 +205,7 @@ CONFIGURE_ENV = \
 	CFLAGS="-O3 -fomit-frame-pointer -fno-unwind-tables -fno-asynchronous-unwind-tables -I$(SYSROOT_PATH)/include" \
 	CFLAGS_NODIST="-fno-semantic-interposition" \
 	LDFLAGS="-L$(SYSROOT_PATH)/lib -T$(SYSROOT_PATH)/lib/user.ld -Wl,--allow-multiple-definition -no-pie -Wl,--export-dynamic -Wl,--no-dynamic-linker" \
-	LIBS="-Wl,--whole-archive $(LIBNVX_CRT0) $(LIBPOSIX) $(LIBC) $(LIBM) $(LIBSTDCXX) $(LIBGCC) -Wl,--no-whole-archive -Wl,--start-group -lsqlite3 -lssl -lcrypto -lz -lbz2 -llzma -lffi -Wl,--end-group" \
+	LIBS="-Wl,--whole-archive $(LIBNVX_CRT0) $(LIBPOSIX) $(LIBC) $(LIBM) $(LIBSTDCXX) $(LIBGCC) -Wl,--no-whole-archive -Wl,--start-group -lsqlite3 -lz -lbz2 -llzma -Wl,--end-group" \
 	LIBSQLITE3_LIBS="-L$(SYSROOT_PATH)/lib -lsqlite3" \
 	LIBSQLITE3_CFLAGS="-I$(SYSROOT_PATH)/include" \
 	ZLIB_LIBS="-L$(SYSROOT_PATH)/lib -lz" \

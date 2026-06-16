@@ -23,6 +23,7 @@ config = load_sibling("config", __file__)
 build_mod = load_sibling("build", __file__)
 lxml_mod = load_sibling("lxml", __file__)
 ramfs_mod = load_sibling("ramfs", __file__)
+runtime_sos_mod = load_sibling("runtime_sos", __file__)
 
 
 def _artifact_base(
@@ -165,6 +166,16 @@ def package(
     py_lib = sysroot_installed / "lib" / config.PYTHON_LIB_DIR
     if py_lib.is_dir():
         shutil.copytree(py_lib, ramfs_sysroot / config.PYTHON_LIB_DIR)
+
+    # Stage the libffi + libssl/libcrypto shared libraries from the
+    # buildroot into the release ramfs at sysroot/lib/<name>.so so the
+    # corresponding C extensions can dlopen them at runtime (see
+    # .nanvix/runtime_sos.py for the DT_NEEDED chain).
+    runtime_sos_mod.stage_runtime_sos(
+        repo_root / ".nanvix" / "buildroot" / "lib",
+        ramfs_sysroot,
+        target_label="release",
+    )
 
     ramfs_mod.trim_sysroot(ramfs_staging)
 
